@@ -584,7 +584,7 @@
         let recorderHideTimers = { post: null, reply: null }; 
 
         // 分塊與分段設定
-        const CHUNK_SIZE_MULTIPLE = 8388608; // 8MB
+        const CHUNK_SIZE_MULTIPLE = 2621440; // 8MB
         let fragmentSession = { post: null, reply: null };
         const FRAGMENT_TIME = 5 * 60 * 1000; // 每 5 分鐘存一次檔 (300,000 毫秒)
         const OVERLAP_TIME = 2000; // 重疊 2 秒，保證影音零斷層、不漏字
@@ -729,6 +729,8 @@
                 } else throw new Error(data.message || "轉發失敗");
 
             } catch (e) {
+                console.error("上傳碎片發生錯誤:", e);
+                showRecorderMsg(type, `網路波動或傳輸過大 (${e.message})，自動退避重試中...`, true, true);
                 state.queue.unshift(chunkObj); // 網路不穩退回佇列
                 setTimeout(() => { state.isUploading = false; processFragmentQueue(type, state); }, 3000);
                 return;
