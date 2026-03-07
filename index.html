@@ -584,7 +584,7 @@
         let recorderHideTimers = { post: null, reply: null }; 
 
         // 分塊與分段設定
-        const CHUNK_SIZE_MULTIPLE = 2621440; // 8MB
+        const CHUNK_SIZE_MULTIPLE = 1048576; // 1MB (完美避開 GAS 的 10MB 限制)
         let fragmentSession = { post: null, reply: null };
         const FRAGMENT_TIME = 5 * 60 * 1000; // 每 5 分鐘存一次檔 (300,000 毫秒)
         const OVERLAP_TIME = 2000; // 重疊 2 秒，保證影音零斷層、不漏字
@@ -651,7 +651,7 @@
                 rec.ondataavailable = (e) => {
                     if (e.data.size > 0) {
                         uploadState.buffer = new Blob([uploadState.buffer, e.data], { type: rec.mimeType || 'video/mp4' });
-                        // 滿 8MB 立即切塊送往雲端 (抗斷線機制)
+                        // 滿指定大小立即切塊送往雲端 (抗斷線機制)
                         if (uploadState.buffer.size >= CHUNK_SIZE_MULTIPLE) {
                             const bytesToUpload = Math.floor(uploadState.buffer.size / CHUNK_SIZE_MULTIPLE) * CHUNK_SIZE_MULTIPLE;
                             const chunkToUpload = uploadState.buffer.slice(0, bytesToUpload);
@@ -679,7 +679,7 @@
                 // 4. 接力賽核心排程：在快要滿 5 分鐘時，先啟動下一個片段！
                 setTimeout(() => {
                     if (session.isActive && !isPaused) {
-                        spawnFragment(type); // 啟動下一個片段 (重疊開始)
+                        spawnFragment(type); // 啟 ক্যামের下一步段 (重疊開始)
                         
                         // 讓當前片段多錄 2 秒鐘再關閉，完美無縫接軌！
                         setTimeout(() => {
@@ -794,16 +794,17 @@
         }
 
         function blobToBase64(blob) { 
-    return new Promise((resolve, _) => { 
-        if (!blob || blob.size === 0) return resolve(""); // 💡 防護：若是 0 byte 直接回傳空字串
-        const reader = new FileReader(); 
-        reader.onloadend = () => {
-            const parts = reader.result.split(',');
-            resolve(parts.length > 1 ? parts[1] : "");
-        }; 
-        reader.readAsDataURL(blob); 
-    }); 
-}
+            return new Promise((resolve, _) => { 
+                if (!blob || blob.size === 0) return resolve(""); // 💡 防護：若是 0 byte 直接回傳空字串
+                const reader = new FileReader(); 
+                reader.onloadend = () => {
+                    const parts = reader.result.split(',');
+                    resolve(parts.length > 1 ? parts[1] : "");
+                }; 
+                reader.readAsDataURL(blob); 
+            }); 
+        }
+
         // --- 多圖無限輪播器狀態與邏輯 (含底部控制列) ---
         let troyCarousels = {};
         let carouselHideTimers = {}; 
