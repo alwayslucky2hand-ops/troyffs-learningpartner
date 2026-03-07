@@ -589,11 +589,16 @@
         const FRAGMENT_TIME = 5 * 60 * 1000; // 每 5 分鐘存一次檔 (300,000 毫秒)
         const OVERLAP_TIME = 2000; // 重疊 2 秒，保證影音零斷層、不漏字
 
+        // ==========================================
+        // 替換 1：修復 startRecording 的 Email 抓取邏輯
+        // ==========================================
         async function startRecording(type) {
             showRecorderMsg(type, "正在建立雲端專屬資料夾...", false, true);
 
-            const emailInput = document.getElementById('email') ? document.getElementById('email').value.trim() : currentUserEmail;
-            const prefix = emailInput ? emailInput.split('@')[0] : 'User';
+            // 💡 修正點：絕對優先使用全域變數 currentUserEmail
+            let actualEmail = currentUserEmail || (document.getElementById('email') ? document.getElementById('email').value.trim() : '');
+            const prefix = actualEmail ? actualEmail.split('@')[0] : 'User';
+            
             let role = '學員首發';
             if (type === 'reply') {
                 role = (currentUserEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase()) ? '教練回覆' : '學員追問';
@@ -619,7 +624,7 @@
             fragmentSession[type] = {
                 isActive: true,
                 index: 1,
-                activeUploadStates: [], // 儲存所有片段的上傳狀態，用來等待 100% 完成
+                activeUploadStates: [], 
                 folderId: folderId,
                 role: role
             };
@@ -636,19 +641,24 @@
             wakeUpRecorderControls(type); 
         }
 
-        // 核心：產生重疊的無縫錄影實例
+        // ==========================================
+        // 替換 2：修復 spawnFragment 的 Email 抓取邏輯
+        // ==========================================
         async function spawnFragment(type) {
             let session = fragmentSession[type];
             if (!session || !session.isActive) return;
 
             let currentIndex = session.index++;
-            const emailInput = document.getElementById('email') ? document.getElementById('email').value.trim() : currentUserEmail;
-            const prefix = emailInput ? emailInput.split('@')[0] : 'User';
-            const extension = isMobileDevice() ? 'mp4' : 'mp4'; // 強制 MP4
+            
+            // 💡 修正點：絕對優先使用全域變數 currentUserEmail
+            let actualEmail = currentUserEmail || (document.getElementById('email') ? document.getElementById('email').value.trim() : '');
+            const prefix = actualEmail ? actualEmail.split('@')[0] : 'User';
+            const extension = isMobileDevice() ? 'mp4' : 'mp4'; 
+            
             const filename = `${prefix}_Part${currentIndex}_${Date.now()}.${extension}`;
 
             try {
-                // 1. 初始化專屬這個片段的 Drive 上傳通道 (skipGemini: true，不浪費 AI 額度)
+                // 1. 初始化專屬這個片段的 Drive 上傳通道
                 const initRes = await fetch(GAS_LIVE_URL, {
                     method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({ action: 'init_upload', filename: filename, mediaType: 'video', skipGemini: true, folderId: session.folderId }) 
@@ -701,12 +711,11 @@
                 rec.start(1000);
                 showRecorderMsg(type, `第 ${currentIndex} 段安全錄製中 (每 5 分鐘自動存檔)...`, false, true);
 
-                // 4. 接力賽核心排程：在快要滿 5 分鐘時，先啟動下一個片段！
+                // 4. 接力賽核心排程
                 setTimeout(() => {
                     if (session.isActive && !isPaused) {
                         spawnFragment(type); // 啟動下一個片段 (重疊開始)
                         
-                        // 讓當前片段多錄 2 秒鐘再關閉，完美無縫接軌！
                         setTimeout(() => {
                             if (rec.state === 'recording') rec.stop();
                         }, OVERLAP_TIME);
