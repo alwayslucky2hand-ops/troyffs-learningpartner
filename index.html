@@ -728,6 +728,7 @@
         }
 
         // 背景靜默上傳引擎
+        // 背景靜默上傳引擎 (修復零字節幽靈死結版)
         async function processFragmentQueue(type, state) {
             if (state.isUploading || state.queue.length === 0) return;
             state.isUploading = true;
@@ -737,9 +738,13 @@
             const start = state.offset;
 
             try {
-                if (blob.size === 0 && isFinal) {
-                    state.isFinalized = true; state.isUploading = false;
-                    processFragmentQueue(type, state); return;
+                // 💡 終極防護：如果是空封包，而且連一丁點都沒傳過，代表這是一段完全沒錄到內容的幽靈檔，直接安全跳過！
+                if (blob.size === 0 && isFinal && start === 0) {
+                    state.isFinalized = true; 
+                    state.isUploading = false;
+                    state.driveId = "skip_empty"; // 賦予安全跳過標記
+                    processFragmentQueue(type, state); 
+                    return;
                 }
 
                 const chunkBase64 = await blobToBase64(blob);
@@ -755,16 +760,20 @@
                 const data = await response.json();
                 if (data.status === 'success' || data.status === 'resume') {
                     state.offset += blob.size;
-                    if (isFinal && data.status === 'success') {
+                    
+                    if (isFinal && data.status === 'success' && data.fileId) {
                         state.driveId = data.fileId;
                         state.isFinalized = true;
                         showRecorderMsg(type, `✅ 第 ${state.index} 段雲端備份已 100% 完成！`, false, true);
+                    } else if (isFinal && data.status === 'resume') {
+                        // 💡 雲端要求接續上傳，強制重試以換取真實 ID
+                        state.queue.unshift({ blob: new Blob([], { type: 'video/mp4' }), isFinal: true }); 
                     }
                 } else throw new Error(data.message || "轉發失敗");
 
             } catch (e) {
                 console.error("上傳碎片發生錯誤:", e);
-                showRecorderMsg(type, `網路波動或傳輸過大 (${e.message})，自動退避重試中...`, true, true);
+                showRecorderMsg(type, `網路波動 (${e.message})，自動退避重試中...`, true, true);
                 state.queue.unshift(chunkObj); // 網路不穩退回佇列
                 setTimeout(() => { state.isUploading = false; processFragmentQueue(type, state); }, 3000);
                 return;
@@ -1775,11 +1784,13 @@
                         }, 500);
                     });
                     
-                    // 收集所有成功上傳的 Drive IDs
+                    // 收集所有成功上傳的 Drive IDs (排除空封包)
                     let sortedStates = session.activeUploadStates.sort((a, b) => a.index - b.index);
                     sortedStates.forEach(state => {
-                        finalVideoIds.push(state.driveId);
-                        finalVideoUrls.push(`https://drive.google.com/file/d/${state.driveId}/view`);
+                        if (state.driveId && state.driveId !== "skip_empty") {
+                            finalVideoIds.push(state.driveId);
+                            finalVideoUrls.push(`https://drive.google.com/file/d/${state.driveId}/view`);
+                        }
                     });
                     
                     // 💡 將 Folder ID 與角色帶給後端
@@ -1840,11 +1851,13 @@
                         }, 500);
                     });
                     
-                    // 收集所有成功上傳的 Drive IDs
+                    // 收集所有成功上傳的 Drive IDs (排除空封包)
                     let sortedStates = session.activeUploadStates.sort((a, b) => a.index - b.index);
                     sortedStates.forEach(state => {
-                        finalVideoIds.push(state.driveId);
-                        finalVideoUrls.push(`https://drive.google.com/file/d/${state.driveId}/view`);
+                        if (state.driveId && state.driveId !== "skip_empty") {
+                            finalVideoIds.push(state.driveId);
+                            finalVideoUrls.push(`https://drive.google.com/file/d/${state.driveId}/view`);
+                        }
                     });
                     
                     // 💡 將 Folder ID 與角色帶給後端
