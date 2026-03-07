@@ -156,7 +156,7 @@
         .stack-group { display: flex; flex-direction: column; gap: 12px; width: 100%; box-sizing: border-box;}
         .stack-group input, .stack-group button { margin-bottom: 0; }
         .hidden-fields { display: none !important; }
-        hr { border: 0; border-top: 1px dashed var(--glass-border); margin: 24px 0; }
+        <hr> { border: 0; border-top: 1px dashed var(--glass-border); margin: 24px 0; }
         
         /* =========================================
            🔥🔥 終極修復 4：絕對霸道的左右死鎖防禦陣線 🔥🔥
@@ -590,13 +590,38 @@
         const OVERLAP_TIME = 2000; // 重疊 2 秒，保證影音零斷層、不漏字
 
         async function startRecording(type) {
+            showRecorderMsg(type, "正在建立雲端專屬資料夾...", false, true);
+
+            const emailInput = document.getElementById('email') ? document.getElementById('email').value.trim() : currentUserEmail;
+            const prefix = emailInput ? emailInput.split('@')[0] : 'User';
+            let role = '學員首發';
+            if (type === 'reply') {
+                role = (currentUserEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase()) ? '教練回覆' : '學員追問';
+            }
+
+            let folderId = "";
+            try {
+                const res = await fetch(GAS_LIVE_URL, {
+                    method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'create_session_folder', email: prefix, role: role })
+                });
+                const data = await res.json();
+                if (data.status !== 'success') throw new Error(data.message);
+                folderId = data.folderId;
+            } catch(e) {
+                showRecorderMsg(type, "資料夾建立失敗: " + e.message, true, true);
+                return;
+            }
+
             showRecorderMsg(type, "正在啟動無縫安全分段錄影...", false, true);
             
             // 初始化本次錄影的全局 Session
             fragmentSession[type] = {
                 isActive: true,
                 index: 1,
-                activeUploadStates: [] // 儲存所有片段的上傳狀態，用來等待 100% 完成
+                activeUploadStates: [], // 儲存所有片段的上傳狀態，用來等待 100% 完成
+                folderId: folderId,
+                role: role
             };
 
             document.getElementById(`${type}-btn-glass-start`).style.display = 'none';
@@ -626,7 +651,7 @@
                 // 1. 初始化專屬這個片段的 Drive 上傳通道 (skipGemini: true，不浪費 AI 額度)
                 const initRes = await fetch(GAS_LIVE_URL, {
                     method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'init_upload', filename: filename, mediaType: 'video', skipGemini: true }) 
+                    body: JSON.stringify({ action: 'init_upload', filename: filename, mediaType: 'video', skipGemini: true, folderId: session.folderId }) 
                 });
                 const initData = await initRes.json();
                 if (initData.status !== 'success') throw new Error(initData.message);
@@ -679,7 +704,7 @@
                 // 4. 接力賽核心排程：在快要滿 5 分鐘時，先啟動下一個片段！
                 setTimeout(() => {
                     if (session.isActive && !isPaused) {
-                        spawnFragment(type); // 啟 ক্যামের下一步段 (重疊開始)
+                        spawnFragment(type); // 啟動下一個片段 (重疊開始)
                         
                         // 讓當前片段多錄 2 秒鐘再關閉，完美無縫接軌！
                         setTimeout(() => {
@@ -1565,11 +1590,11 @@
                 let vid = el.dataset.vid;
                 if(!ytPlayers[uid]) {
                     ytPlayers[uid] = new YT.Player(el.id, {
-    videoId: vid,
-    width: '100%',   // 新增：強制寬度為容器的 100%
-    height: '100%',  // 新增：強制高度為容器的 100%
-    playerVars: { 'controls': 0, 'disablekb': 1, 'rel': 0, 'modestbranding': 1, 'playsinline': 1, 'iv_load_policy': 3, 'vq': 'hd1080' },
-    events: {
+                        videoId: vid,
+                        width: '100%',   
+                        height: '100%',  
+                        playerVars: { 'controls': 0, 'disablekb': 1, 'rel': 0, 'modestbranding': 1, 'playsinline': 1, 'iv_load_policy': 3, 'vq': 'hd1080' },
+                        events: {
                             'onReady': (e) => onPlayerReady(uid, e),
                             'onStateChange': (e) => onPlayerStateChange(uid, e)
                         }
@@ -1714,6 +1739,7 @@
                 let finalVideoIds = [];
                 let finalTitle = titleInput || "AI 正在分析您的提問...";
                 let finalDesc = descInput || "";
+                let folderId = "";
 
                 if (mediaType === 'image') {
                     if(!titleInput || !descInput) throw new Error('圖片模式下，標題與描述為必填！');
@@ -1726,6 +1752,7 @@
                 } else {
                     const session = fragmentSession['post'];
                     if (!session || session.activeUploadStates.length === 0) throw new Error("提示：請先完成錄影！");
+                    folderId = session.folderId; // 💡 取出預先建立的資料夾 ID
                     
                     btn.innerHTML = '<span class="spinner"></span> 正在確認所有片段雲端同步 (抗斷線檢測中)...';
                     
@@ -1746,12 +1773,14 @@
                         finalVideoUrls.push(`https://drive.google.com/file/d/${state.driveId}/view`);
                     });
                     
-                    finalDesc += `\n\n[SYS:處理中] 影片已安全分段備份至雲端，等待 GCP 後端無損拼接與 AI 解析中...\n[SYS:MERGE_PENDING]`;
+                    // 💡 將 Folder ID 與角色帶給後端
+                    finalDesc += `\n\n[SYS:處理中] 影片已安全分段備份至雲端，等待 GCP 後端無損拼接與 AI 解析中...\n[SYS:MERGE_PENDING|FOLDER=${folderId}|ROLE=${session.role}]`;
                 }
 
                 await fetch(GAS_LIVE_URL, {
                     method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'add_post', email: currentUserEmail, title: finalTitle, desc: finalDesc, videoUrl: finalVideoUrls.join(','), videoFileId: finalVideoIds.join(','), mediaType: mediaType })
+                    // 💡 提交參數新增 folderId
+                    body: JSON.stringify({ action: 'add_post', email: currentUserEmail, title: finalTitle, desc: finalDesc, videoUrl: finalVideoUrls.join(','), videoFileId: finalVideoIds.join(','), mediaType: mediaType, folderId: folderId })
                 });
 
                 btn.disabled = false; btn.innerText = "確認發布並呼叫 AI 解析";
@@ -1776,6 +1805,7 @@
                 let finalVideoUrls = [];
                 let finalVideoIds = [];
                 let finalDesc = descInput || "";
+                let folderId = "";
 
                 if (mediaType === 'image') {
                     if(!descInput) throw new Error('圖片模式下，回覆內容必填！');
@@ -1787,6 +1817,7 @@
                 } else {
                     const session = fragmentSession['reply'];
                     if (!session || session.activeUploadStates.length === 0) throw new Error("提示：請先完成錄影！");
+                    folderId = session.folderId; // 💡 取出預先建立的資料夾 ID
                     
                     btn.innerHTML = '<span class="spinner"></span> 正在確認所有片段雲端同步 (抗斷線檢測中)...';
                     
@@ -1807,12 +1838,14 @@
                         finalVideoUrls.push(`https://drive.google.com/file/d/${state.driveId}/view`);
                     });
                     
-                    finalDesc += `\n\n[SYS:處理中] 影片已安全分段備份至雲端，等待 GCP 後端無損拼接與 AI 解析中...\n[SYS:MERGE_PENDING]`;
+                    // 💡 將 Folder ID 與角色帶給後端
+                    finalDesc += `\n\n[SYS:處理中] 影片已安全分段備份至雲端，等待 GCP 後端無損拼接與 AI 解析中...\n[SYS:MERGE_PENDING|FOLDER=${folderId}|ROLE=${session.role}]`;
                 }
 
                 await fetch(GAS_LIVE_URL, {
                     method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'add_reply', courseId: currentPost.courseId, email: currentUserEmail, desc: finalDesc, videoUrl: finalVideoUrls.join(','), videoFileId: finalVideoIds.join(','), mediaType: mediaType })
+                    // 💡 提交參數新增 folderId
+                    body: JSON.stringify({ action: 'add_reply', courseId: currentPost.courseId, email: currentUserEmail, desc: finalDesc, videoUrl: finalVideoUrls.join(','), videoFileId: finalVideoIds.join(','), mediaType: mediaType, folderId: folderId })
                 });
 
                 btn.disabled = false; btn.innerText = "確認發布並呼叫 AI 解析";
