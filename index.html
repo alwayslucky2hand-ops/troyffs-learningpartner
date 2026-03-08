@@ -798,16 +798,23 @@
         // ==========================================
         // 核心優化：GAS 隱形轉發串流引擎
         // ==========================================
+        // ==========================================
+        // 核心優化：GAS 隱形轉發串流引擎 (修復 Offset 衝突與防彈佇列)
+        // ==========================================
+        // ==========================================
+        // 核心優化：GAS 隱形轉發串流引擎 (修復 Offset 衝突與防彈佇列)
+        // ==========================================
         async function processUploadQueue(type) {
             const state = streamStates[type];
             if (!state || state.isUploading || state.queue.length === 0) return;
             state.isUploading = true;
 
+            // 1. 從佇列中取出一個碎塊
             const chunkObj = state.queue.shift();
-            const { blob, isFinal, isSplitting } = chunkObj;
-            const start = state.offset;
+            const { blob, isFinal, isSplitting, driveUrl, geminiUrl, offset } = chunkObj; // 💡 關鍵修復：從 chunkObj 取出它專屬的網址與進度
 
             try {
+                // 防呆：如果是空資料
                 if (blob.size === 0 && isFinal) {
                     if (!isSplitting) {
                         state.isFinalized = true;
@@ -820,16 +827,16 @@
 
                 const chunkBase64 = await blobToBase64(blob);
 
-                let progressText = `雲端同步中... (已上傳 ${(start / 1024 / 1024).toFixed(1)} MB)`;
+                let progressText = `雲端同步中... (已上傳 ${(offset / 1024 / 1024).toFixed(1)} MB)`;
                 if (isFinal || currentRecordType !== type) {
-                    const totalBytesToUpload = state.offset + state.queue.reduce((acc, curr) => acc + curr.blob.size, 0) + blob.size;
-                    const percent = Math.round(((start + blob.size) / totalBytesToUpload) * 100);
-                    progressText = `雲端備份進度：${percent}%`;
+                    // 這裡的 % 數計算可能因為多 Part 而稍微不準，但不影響上傳，顯示文字即可
+                    progressText = `正在雲端封裝此片段...`;
                 }
                 showRecorderMsg(type, `<span class="spinner"></span> ${progressText} (請勿關閉網頁)`, false, true);
 
-                const payloadTotalSize = isFinal ? (start + blob.size) : '*';
+                const payloadTotalSize = isFinal ? (offset + blob.size) : '*';
 
+                // 2. 發送請求，使用這個碎塊「專屬」的參數
                 const response = await fetch(GAS_LIVE_URL, {
                     method: 'POST',
                     redirect: 'follow',
@@ -837,10 +844,10 @@
                     body: JSON.stringify({
                         action: 'upload_chunk',
                         isDualTrack: true,
-                        uploadUrlDrive: state.driveUrl,
-                        uploadUrlGemini: state.geminiUrl,
+                        uploadUrlDrive: driveUrl, // 💡 使用綁定的 Drive 網址
+                        uploadUrlGemini: geminiUrl, // 💡 使用綁定的 Gemini 網址
                         chunkBase64: chunkBase64,
-                        start: start,
+                        start: offset, // 💡 使用綁定的進度
                         totalSize: payloadTotalSize
                     })
                 });
@@ -848,8 +855,8 @@
                 const data = await response.json();
 
                 if (data.status === 'success' || data.status === 'resume') {
-                    state.offset += blob.size;
-
+                    // 如果成功，不需要再更新 state.offset，因為我們現在是用傳入的
+                    
                     if (isFinal && data.status === 'success') {
                         state.completedParts.push({
                             driveId: data.driveId,
@@ -861,7 +868,7 @@
                             state.isFinalized = true;
                             showRecorderMsg(type, "✅ 雲端備份已 100% 完成！請點擊下方確認發布。", false, true);
                         } else {
-                            showRecorderMsg(type, `✅ Part ${state.partIndex - 1} 已安全存入雲端專屬資料夾！`, false, true);
+                            showRecorderMsg(type, `✅ 歷史片段已安全存入雲端專屬資料夾！`, false, true);
                         }
                     }
                 } else {
@@ -870,7 +877,9 @@
 
             } catch (e) {
                 console.error("Upload error caught:", e);
-                showRecorderMsg(type, `網路波動 (${e.message})，系統將於 3 秒後自動重試...`, true, true);
+                showRecorderMsg(type, `網路波動 (${e.message})，系統將自動重試...`, true, true);
+                
+                // 發生錯誤，將這塊碎片「塞回」佇列最前面，保留它專屬的網址與進度
                 state.queue.unshift(chunkObj);
                 
                 setTimeout(() => { 
@@ -1148,11 +1157,10 @@
             return isAdmin ? '陪跑教練' : '學員追問';
         }
 
-        async function startRecording(type) {
+        sync function startRecording(type) {
             const titleInput = document.getElementById('post-title') ? document.getElementById('post-title').value.trim() : '';
-            if (type === 'post' && !titleInput) {
-                return showAppMsg('post-msg', '開始錄影前，請先輸入提問標題！', true);
-            }
+            
+            // 已經把強制阻擋的 if 判斷式刪除了！使用者現在可以直接無腦點擊錄影！
 
             showRecorderMsg(type, "正在初始化雲端專屬資料夾與直傳通道...", false, true);
             
@@ -1220,7 +1228,18 @@
                         const bytesToUpload = Math.floor(state.buffer.size / CHUNK_SIZE_MULTIPLE) * CHUNK_SIZE_MULTIPLE;
                         const chunkToUpload = state.buffer.slice(0, bytesToUpload);
                         state.buffer = state.buffer.slice(bytesToUpload);
-                        state.queue.push({ blob: chunkToUpload, isFinal: false, isSplitting: false });
+                        
+                        // 💡 關鍵修復：綁定當下的資訊
+                        state.queue.push({ 
+                            blob: chunkToUpload, 
+                            isFinal: false, 
+                            isSplitting: false,
+                            driveUrl: state.driveUrl,
+                            geminiUrl: state.geminiUrl,
+                            offset: state.offset
+                        });
+                        state.offset += chunkToUpload.size; // 更新整體進度
+                        
                         processUploadQueue(type);
                     }
                 } 
@@ -1229,11 +1248,19 @@
             mediaRecorder.onstop = function() {
                 const state = streamStates[type];
                 
-                if (state.buffer && state.buffer.size > 0) {
-                    state.queue.push({ blob: state.buffer, isFinal: true, isSplitting: state.isSplitting });
-                } else {
-                    state.queue.push({ blob: new Blob([], { type: mimeTypeToUse }), isFinal: true, isSplitting: state.isSplitting });
-                }
+                let finalBlob = state.buffer && state.buffer.size > 0 ? state.buffer : new Blob([], { type: mimeTypeToUse });
+
+                // 💡 關鍵修復：綁定當下的資訊
+                state.queue.push({ 
+                    blob: finalBlob, 
+                    isFinal: true, 
+                    isSplitting: state.isSplitting,
+                    driveUrl: state.driveUrl,
+                    geminiUrl: state.geminiUrl,
+                    offset: state.offset
+                });
+                
+                // 重置 Buffer (不需要重置 offset，因為 triggerSplit 會處理)
                 state.buffer = new Blob([], { type: mimeTypeToUse });
                 processUploadQueue(type);
 
@@ -1302,14 +1329,15 @@
             const state = streamStates[type];
             if (state && state.splitTimer) clearInterval(state.splitTimer);
             if (state) {
-                if (state.driveUrl) fetch(state.driveUrl, { method: 'DELETE' }).catch(e => {});
-                if (state.geminiUrl) fetch(state.geminiUrl, { method: 'DELETE' }).catch(e => {});
-                
+                // 移除會造成 CORS 錯誤的 Drive DELETE，專注於可刪除的 Gemini 檔案
                 state.completedParts.forEach(part => {
-                    fetch(`https://www.googleapis.com/drive/v3/files/${part.driveId}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${ScriptApp?.getOAuthToken() || ''}` }
-                    }).catch(e=>{});
+                    if (part.geminiName) {
+                        try {
+                            fetch(`https://generativelanguage.googleapis.com/v1beta/${part.geminiName}?key=${getGeminiApiKey()}`, {
+                                method: 'DELETE'
+                            }).catch(e=>{});
+                        } catch(err) {}
+                    }
                 });
             }
             streamStates[type] = null;
