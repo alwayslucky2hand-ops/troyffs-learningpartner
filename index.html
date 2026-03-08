@@ -328,8 +328,8 @@
         <input type="hidden" id="post-media-type" value="video">
 
         <div id="post-text-fields" class="hidden-fields">
-            <input type="text" id="post-title" class="input-box" placeholder="請輸入提問標題 (必填)">
-            <textarea id="post-desc" class="input-box" placeholder="請詳細描述您的問題或需求，搭配圖片能讓教練與 AI 更準確協助您... (必填)"></textarea>
+            <input type="text" id="post-title" class="input-box" placeholder="請輸入提問標題 (選填，AI 將自動為您生成)">
+            <textarea id="post-desc" class="input-box" placeholder="請詳細描述您的問題或需求，若留白將由 AI 自動觀看影片幫您總結... (選填)"></textarea>
         </div>
 
         <div id="post-recorder-container" class="recorder-box">
@@ -447,7 +447,7 @@
                 <input type="hidden" id="reply-media-type" value="video">
 
                 <div id="reply-text-fields" class="hidden-fields">
-                    <textarea id="reply-desc" class="input-box" placeholder="請輸入回覆或追問的文字內容 (必填)"></textarea>
+                    <textarea id="reply-desc" class="input-box" placeholder="請輸入回覆或追問的文字內容，若留白將由 AI 自動幫您總結... (選填)"></textarea>
                 </div>
 
                 <div id="reply-recorder-container" class="recorder-box">
@@ -463,7 +463,7 @@
                         ※ 分享螢幕時，請記得勾選「一併分享系統音訊」！
                     </span>
 
-                    <button id="reply-btn-setup-record" onclick="setupRecording('reply')" class="btn-outline">啟 auto</button>
+                    <button id="reply-btn-setup-record" onclick="setupRecording('reply')" class="btn-outline">啟動影音錄製權限</button>
 
                     <div id="reply-recorder-wrapper" class="recorder-video-wrapper" onmousemove="wakeUpRecorderControls('reply')" ontouchstart="wakeUpRecorderControls('reply', {passive:true})" onclick="wakeUpRecorderControls('reply')">
                         <video id="reply-preview-video" autoplay playsinline></video>
@@ -796,12 +796,6 @@
         }
 
         // ==========================================
-        // 核心優化：GAS 隱形轉發串流引擎
-        // ==========================================
-        // ==========================================
-        // 核心優化：GAS 隱形轉發串流引擎 (修復 Offset 衝突與防彈佇列)
-        // ==========================================
-        // ==========================================
         // 核心優化：GAS 隱形轉發串流引擎 (修復 Offset 衝突與防彈佇列)
         // ==========================================
         async function processUploadQueue(type) {
@@ -897,7 +891,7 @@
         // 無縫錄影與原生預覽引擎
         // ==========================================
         function killMediaTracks() {
-            if (drawLoopId) { clearTimeout(drawLoopId); drawLoopId = null; } 
+            if (drawLoopId) { cancelAnimationFrame(drawLoopId); clearTimeout(drawLoopId); drawLoopId = null; } 
             if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
             if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
             if (combinedStream) { combinedStream.getTracks().forEach(t => t.stop()); combinedStream = null; }
@@ -980,10 +974,11 @@
                 }
                 
                 internalCanvas.style.position = 'fixed'; internalCanvas.style.top = '-9999px'; internalCanvas.style.opacity = '0'; document.body.appendChild(internalCanvas);
+                // 💡 流暢優化：關閉 alpha 通道以提升渲染速度，並移除極耗效能的 imageSmoothingQuality
                 internalCtx = internalCanvas.getContext('2d', { alpha: false });
-                internalCtx.imageSmoothingEnabled = true; internalCtx.imageSmoothingQuality = 'high';
+                internalCtx.imageSmoothingEnabled = true; 
+                
                 cameraHiddenVideo = document.createElement('video'); cameraHiddenVideo.muted = true; cameraHiddenVideo.autoplay = true; cameraHiddenVideo.playsInline = true;
-                lastDrawTime = 0;
 
                 if (isMobile) {
                     currentFacingMode = 'user';
@@ -995,7 +990,9 @@
                     cameraHiddenVideo.srcObject = new MediaStream([micStream.getVideoTracks()[0]]);
 
                     function drawMobileFrame() {
-                        if (!internalCtx) return; drawLoopId = setTimeout(drawMobileFrame, fpsInterval);
+                        if (!internalCtx) return; 
+                        // 💡 流暢優化：改用 requestAnimationFrame 同步螢幕更新率
+                        drawLoopId = requestAnimationFrame(drawMobileFrame);
                         
                         const currentIsLandscape = window.innerWidth > window.innerHeight;
                         const targetW = currentIsLandscape ? 1920 : 1080;
@@ -1060,7 +1057,10 @@
                     else cameraHiddenVideo = null;
 
                     function drawPcFrame() {
-                        if (!internalCtx) return; drawLoopId = setTimeout(drawPcFrame, fpsInterval);
+                        if (!internalCtx) return; 
+                        // 💡 流暢優化：改用 requestAnimationFrame 同步螢幕更新率
+                        drawLoopId = requestAnimationFrame(drawPcFrame);
+
                         internalCtx.fillStyle = '#111'; internalCtx.fillRect(0, 0, internalCanvas.width, internalCanvas.height);
                         let sourceVid = (activeVideoSource === 'screen') ? screenHiddenVideo : cameraHiddenVideo;
                         
@@ -1079,9 +1079,10 @@
                     }
                     drawPcFrame();
                     screenStream.getVideoTracks()[0].onended = () => { if(mediaRecorder && mediaRecorder.state === "recording") stopRecording(type); else cancelRecording(type); };
-                    showRecorderMsg(type, "視窗已連接！點擊開始錄製。", false, true);
+                    showRecorderMsg(type, "視窗/畫面已連接！點擊開始錄製。", false, true);
                 }
 
+                // 💡 流暢優化：限制 Canvas 擷取最高幀率為 30FPS
                 let tracks = [...internalCanvas.captureStream(30).getVideoTracks(), ...dest.stream.getAudioTracks()]; combinedStream = new MediaStream(tracks);
                 const previewVideo = document.getElementById(`${type}-preview-video`); 
                 previewVideo.srcObject = combinedStream; 
@@ -1208,7 +1209,8 @@
             }
 
             recordedChunks = []; 
-            const targetBps = isMobileDevice() ? 5000000 : 8000000;
+            // 💡 流暢優化：降低瀏覽器編碼壓力，PC端 4Mbps、手機端 2.5Mbps 就足以維持 1080p 清晰度
+            const targetBps = isMobileDevice() ? 2500000 : 4000000;
 
             let options = { videoBitsPerSecond: targetBps };
             if (!isMobileDevice() && mimeTypeToUse) {
