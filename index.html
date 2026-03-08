@@ -1362,10 +1362,10 @@
             
             mediaRecorder.start(1000); 
             
-            // 啟動 5 分鐘切割倒數
+            // 啟動 3 分鐘切割倒數
             streamStates[type].splitTimer = setInterval(() => {
                 triggerSplit(type);
-            }, 5 * 60 * 1000);
+            }, 3 * 60 * 1000);
 
             document.getElementById(`${type}-btn-glass-start`).style.display = 'none';
             const pauseBtn = document.getElementById(`${type}-btn-glass-pause`);
