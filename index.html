@@ -1215,13 +1215,13 @@
         }
 
         // ==========================================
-        // 每 5 分鐘自動切割功能實作
+        // 每 3 分鐘自動切割功能實作
         // ==========================================
         async function triggerSplit(type) {
             const state = streamStates[type];
             if (!state || !mediaRecorder || mediaRecorder.state !== 'recording') return;
 
-            showRecorderMsg(type, `[防護機制] 錄製達 ${state.partIndex * 5} 分鐘，正在雲端封裝 Part ${state.partIndex}...`, false, true);
+            showRecorderMsg(type, `[防護機制] 錄製達 ${state.partIndex * 3} 分鐘，正在雲端封裝 Part ${state.partIndex}...`, false, true);
             state.isSplitting = true;
             mediaRecorder.stop(); // 觸發 onstop 將當前緩衝推入上傳佇列並封裝
 
