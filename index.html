@@ -1278,4 +1278,302 @@
         async function submitPost() {
             const titleInput = document.getElementById('post-title').value.trim();
             const descInput = document.getElementById('post-desc').value.trim();
-            const mediaType = document.getElementById('post-media-type').
+            const mediaType = document.getElementById('post-media-type').value; 
+            const btn = document.getElementById('btn-submit-post');
+            
+            btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 資料處理上傳中...';
+
+            try {
+                let finalVideoUrls = []; let finalVideoIds = [];
+                let finalTitle = titleInput || "AI 正在分析您的提問..."; let finalDesc = descInput || "";
+                let generatedCourseId = "";
+
+                if (mediaType === 'image') {
+                    if(!titleInput || !descInput) throw new Error('圖片模式下，標題與描述為必填！');
+                    generatedCourseId = generateAutoId(); // 圖片模式在這裡才產生 Course ID
+                    if (pendingImages['post'].length > 0) {
+                        const uploadResult = await uploadPendingImages('post'); 
+                        finalVideoUrls.push(uploadResult.urls); finalVideoIds.push(uploadResult.ids);
+                    } else { throw new Error('提示：請先拍攝或選擇圖片！'); }
+                    finalTitle = titleInput;
+                    finalDesc += "\n\n[SYS:處理中] AI 正在準備解析並建立專屬資料夾...";
+                } else {
+                    const state = streamStates['post'];
+                    if (!state || state.completedParts.length === 0) throw new Error("提示：請先完成錄影！");
+                    generatedCourseId = state.sessionCourseId; // 取用一開始按下錄影時建好的 ID
+                    
+                    btn.innerHTML = '<span class="spinner"></span> 正在確認雲端檔案同步...';
+                    await new Promise(resolve => { const check = setInterval(() => { if (state.isFinalized) { clearInterval(check); resolve(); } }, 500); });
+                    
+                    let geminiFileDataArray = [];
+                    state.completedParts.forEach(part => {
+                        finalVideoUrls.push(`https://drive.google.com/file/d/${part.driveId}/view`);
+                        finalVideoIds.push(part.driveId);
+                        geminiFileDataArray.push(`[SYS:GEMINI_FILE=${part.geminiUri}|#|${part.geminiName}]`);
+                    });
+                    finalDesc += `\n\n[SYS:處理中] 影片已備份至雲端硬碟 (共 ${state.completedParts.length} 個片段)，AI 正在進行深度解析...\n${geminiFileDataArray.join('\n')}`;
+                }
+
+                await fetch(GAS_LIVE_URL, {
+                    method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'add_post', courseId: generatedCourseId, email: currentUserEmail, title: finalTitle, desc: finalDesc, videoUrl: finalVideoUrls.join(','), videoFileId: finalVideoIds.join(','), mediaType: mediaType })
+                });
+
+                btn.disabled = false; btn.innerText = "確認發布並呼叫 AI 解析";
+                document.getElementById('post-title').value = ''; document.getElementById('post-desc').value = ''; 
+                clearDraft('post'); resetRecordingUI('post'); showAppMsg('post-msg', '提問發布成功！已交由 AI 處理。'); fetchLiveData(); 
+
+            } catch(err) { btn.disabled = false; btn.innerText = "確認發布並呼叫 AI 解析"; return showAppMsg('post-msg', err.message, true); }
+        }
+
+        async function submitReply() {
+            const descInput = document.getElementById('reply-desc').value.trim();
+            const mediaType = document.getElementById('reply-media-type').value; 
+            const btn = document.getElementById('btn-submit-reply');
+            
+            btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 資料處理上傳中...';
+
+            try {
+                let finalVideoUrls = []; let finalVideoIds = []; let finalDesc = descInput || "";
+
+                if (mediaType === 'image') {
+                    if(!descInput) throw new Error('圖片模式下，回覆內容必填！');
+                    if (pendingImages['reply'].length > 0) {
+                        const uploadResult = await uploadPendingImages('reply');
+                        finalVideoUrls.push(uploadResult.urls); finalVideoIds.push(uploadResult.ids);
+                    } else { throw new Error('提示：請先拍攝或選擇圖片！'); }
+                    finalDesc += "\n\n[SYS:處理中] AI 正在歸檔您的圖片並進行解析...";
+                } else {
+                    const state = streamStates['reply'];
+                    if (!state || state.completedParts.length === 0) throw new Error("提示：請先完成錄影！");
+                    
+                    btn.innerHTML = '<span class="spinner"></span> 正在確認雲端檔案同步...';
+                    await new Promise(resolve => { const check = setInterval(() => { if (state.isFinalized) { clearInterval(check); resolve(); } }, 500); });
+                    
+                    let geminiFileDataArray = [];
+                    state.completedParts.forEach(part => {
+                        finalVideoUrls.push(`https://drive.google.com/file/d/${part.driveId}/view`);
+                        finalVideoIds.push(part.driveId);
+                        geminiFileDataArray.push(`[SYS:GEMINI_FILE=${part.geminiUri}|#|${part.geminiName}]`);
+                    });
+                    finalDesc += `\n\n[SYS:處理中] 影片已備份至雲端硬碟 (共 ${state.completedParts.length} 個片段)，AI 正在進行深度解析...\n${geminiFileDataArray.join('\n')}`;
+                }
+
+                await fetch(GAS_LIVE_URL, {
+                    method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'add_reply', courseId: currentPost.courseId, email: currentUserEmail, desc: finalDesc, videoUrl: finalVideoUrls.join(','), videoFileId: finalVideoIds.join(','), mediaType: mediaType })
+                });
+
+                btn.disabled = false; btn.innerText = "確認發布並呼叫 AI 解析"; document.getElementById('reply-desc').value = ''; 
+                clearDraft('reply'); resetRecordingUI('reply'); showAppMsg('reply-msg', '回覆成功！已交由 AI 處理歸檔。'); fetchLiveData(); 
+
+            } catch(err) { btn.disabled = false; btn.innerText = "確認發布並呼叫 AI 解析"; return showAppMsg('reply-msg', err.message, true); }
+        }
+
+        function sendFeedback(courseId, satisfaction) {
+            const box = document.getElementById(`feedback-box-${courseId}`); if(box) box.innerHTML = '<span class="spinner"></span> 正在記錄您的回饋...';
+            fetch(GAS_LIVE_URL, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'submit_feedback', courseId: courseId, satisfaction: satisfaction }) })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') { 
+                    if(satisfaction === 'yes') { showAppMsg('reply-msg', '感謝回饋！教練會繼續陪您一起成長！', false); } 
+                    else { showAppMsg('reply-msg', '已收到您的不滿意反饋，教練會盡快再次親自協助您！', true); } 
+                    fetchLiveData(); 
+                } else { if(box) box.innerHTML = `<span style="color:red; font-weight:bold;">錯誤: ${data.message}</span>`; showAppMsg('reply-msg', '紀錄失敗：' + data.message, true); }
+            })
+            .catch(err => { showAppMsg('reply-msg', '系統連線異常', true); });
+        }
+
+        function renderThread(post) {
+            let items = [];
+            items.push({
+                roleHtml: `<span class="role-badge student-badge">學員發問 (首發)</span> <span class="thread-email">${post.email}</span>`,
+                timeHtml: `${post.date} ${post.time}`,
+                contentHtml: `<div class="post-excerpt">${formatText(post.desc)}</div>${getMediaIframe(post.videoUrl)}`,
+                itemClass: 'student'
+            });
+
+            post.replies.forEach(reply => {
+                let parts = reply.split('|||');
+                if(parts.length >= 5) {
+                    let rDate = parts[0], rTime = parts[1], rRole = parts[2], rEmail = parts[3], rContent = parts[4], rVid = parts[5] || '';
+                    let isCoach = rRole === '陪跑教練';
+                    items.push({
+                        roleHtml: `<span class="role-badge ${isCoach ? 'coach-badge' : 'student-badge'}">${rRole}</span> <span class="thread-email">${rEmail}</span>`,
+                        timeHtml: `${rDate} ${rTime}`,
+                        contentHtml: `<div class="post-excerpt">${formatText(rContent)}</div>${getMediaIframe(rVid)}`,
+                        itemClass: isCoach ? 'coach' : 'student'
+                    });
+                }
+            });
+
+            items.reverse(); let html = '';
+            let hasFeedback = post.desc.includes('系統紀錄：學員');
+            if (post.status === '教練已回覆' && !hasFeedback) {
+                html += `<div id="feedback-box-${post.courseId}" class="thread-item" style="background: #F8FAFC; border: 2px dashed var(--primary-yellow); text-align: center; margin-bottom: 15px; padding: 25px 20px;"><p style="font-size:1.1rem; color:var(--slate-blue); margin-bottom:15px; font-weight:bold;">請問教練最新的解答有幫助您解決問題嗎？</p><div style="display:flex; gap:12px; justify-content:center; max-width: 300px; margin: 0 auto;"><button onclick="sendFeedback('${post.courseId}', 'yes')" style="margin:0; flex:1; background:#10B981; color:#fff; border:none; box-shadow:0 4px 6px rgba(16,185,129,0.2);">滿意</button><button onclick="sendFeedback('${post.courseId}', 'no')" style="margin:0; flex:1; background:#EF4444; color:#fff; border:none; box-shadow:0 4px 6px rgba(239,68,68,0.2);">不滿意</button></div></div>`;
+                if (items.length > 0) { html += `<div class="visual-divider"><div class="visual-divider-icon">💬</div></div>`; }
+            }
+
+            items.forEach((item, index) => {
+                html += `<div class="thread-item ${item.itemClass}"><div class="thread-header"><div class="thread-role">${item.roleHtml}</div><span class="thread-time">${item.timeHtml}</span></div>${item.contentHtml}</div>`;
+                if (index < items.length - 1) { html += `<div class="visual-divider"><div class="visual-divider-icon">💬</div></div>`; }
+            });
+
+            document.getElementById('thread-container').innerHTML = html;
+            setTimeout(initAllYTPlayers, 100);
+        }
+
+        function enterClass(courseId) {
+            currentPost = allLiveData.find(p => p.courseId === courseId); if(!currentPost) return;
+            document.getElementById('publish-section').style.display = 'none'; document.getElementById('list-section').style.display = 'none'; document.getElementById('detail-section').style.display = 'block'; window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.getElementById('detail-title').innerText = currentPost.title; document.getElementById('detail-meta').innerHTML = `<span>編號: ${currentPost.courseId}</span> <span>狀態: ${currentPost.status}</span>`;
+            
+            const authWarningContainer = document.getElementById('auth-warning-container'); const authWarningMessage = document.getElementById('auth-warning-message');
+            const authWarningBtn = document.getElementById('auth-warning-btn'); const threadContentWrapper = document.getElementById('thread-content-wrapper');
+            const validEmails = currentPost.email.toLowerCase().split(/[\n,]+/).map(e => e.trim()); const isAllowed = validEmails.includes(currentUserEmail.toLowerCase()) || currentUserEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+
+            if (!currentUserEmail) { authWarningContainer.style.display = 'flex'; threadContentWrapper.style.display = 'none'; authWarningMessage.innerHTML = '<div class="warning-label" style="display:inline-block; margin-bottom:10px;">專屬內容</div><br>請先登入或加入會員以解鎖您的權限！'; authWarningBtn.style.display = 'flex';
+            } else if (!isAllowed) { authWarningContainer.style.display = 'flex'; threadContentWrapper.style.display = 'none'; authWarningMessage.innerHTML = '<div class="warning-label" style="display:inline-block; margin-bottom:10px;">權限限制</div><br>這是其他學員的專屬日誌，為保障隱私您無權觀看。'; authWarningBtn.style.display = 'none'; 
+            } else { authWarningContainer.style.display = 'none'; threadContentWrapper.style.display = 'block'; renderThread(currentPost); }
+        }
+
+        function backToList() {
+            document.getElementById('detail-section').style.display = 'none'; document.getElementById('list-section').style.display = 'block';
+            if(currentUserEmail) document.getElementById('publish-section').style.display = 'block';
+            killMediaTracks(); resetRecordingUI('post'); resetRecordingUI('reply'); window.scrollTo({ top: 0, behavior: 'smooth' }); filterPosts();
+        }
+
+        function showAppMsg(elId, msg, isError = false) {
+            const el = document.getElementById(elId); if (!el) return;
+            el.innerText = msg; el.className = isError ? 'inline-msg' : 'inline-msg success';
+            setTimeout(() => { el.innerText = ''; }, 5000);
+        }
+
+        function scrollToLogin() { document.getElementById('login-section').scrollIntoView({ behavior: 'smooth' }); }
+
+        function requestOTP() {
+            const email = document.getElementById('email').value.trim(); if (!email) return showAppMsg('otp-msg', '請輸入 Email', true);
+            const btn = document.getElementById('btn-otp'); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 發送中...';
+            fetch(GAS_LIVE_URL, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'requestOTP', email: email }) })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false; btn.innerText = '寄送驗證碼';
+                if (data.status === 'success') { document.getElementById('step-1').style.display = 'none'; document.getElementById('step-2').style.display = 'block'; showAppMsg('login-msg', '驗證碼已發送至您的信箱，請查收！');
+                } else { showAppMsg('otp-msg', data.message || '發送失敗，請重試', true); }
+            }).catch(err => { btn.disabled = false; btn.innerText = '寄送驗證碼'; showAppMsg('otp-msg', '系統連線錯誤，請稍後再試', true); });
+        }
+
+        function verifyLogin() {
+            const email = document.getElementById('email').value.trim(); const otp = document.getElementById('otp-code').value.trim();
+            if (!otp) return showAppMsg('login-msg', '請輸入驗證碼', true);
+            const btn = document.getElementById('btn-login'); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 驗證中...';
+            fetch(GAS_LIVE_URL, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'verifyOTP', email: email, otp: otp }) })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false; btn.innerText = '進入日誌'; 
+                if (data.status === 'success') {
+                    currentUserEmail = email; localStorage.setItem('user_email', email); localStorage.setItem('login_timestamp', Date.now().toString());
+                    document.getElementById('login-status').innerText = `目前狀態：已登入 (${email})`; document.getElementById('login-status').style.color = 'var(--accent-green)';
+                    document.getElementById('step-2').style.display = 'none'; document.getElementById('btn-logout').style.display = 'block'; document.getElementById('publish-section').style.display = 'block'; fetchLiveData(); 
+                } else { showAppMsg('login-msg', data.message || '驗證碼錯誤', true); }
+            }).catch(err => { btn.disabled = false; btn.innerText = '進入日誌'; showAppMsg('login-msg', '系統連線錯誤', true); });
+        }
+
+        function cancelLogin() { document.getElementById('step-2').style.display = 'none'; document.getElementById('step-1').style.display = 'flex'; document.getElementById('otp-code').value = ''; }
+
+        function logout() {
+            currentUserEmail = ''; localStorage.removeItem('user_email'); localStorage.removeItem('login_timestamp');
+            document.getElementById('login-status').innerText = '目前狀態：未登入 (訪客)'; document.getElementById('login-status').style.color = 'var(--primary-yellow)';
+            document.getElementById('btn-logout').style.display = 'none'; document.getElementById('step-1').style.display = 'flex';
+            document.getElementById('email').value = ''; document.getElementById('publish-section').style.display = 'none'; fetchLiveData(); 
+        }
+
+        function fetchLiveData(silent = false) {
+            if (!silent) { document.getElementById('list-section').style.display = 'block'; document.getElementById('loading-list').style.display = 'block'; document.getElementById('post-list').innerHTML = ''; }
+            fetch(GAS_LIVE_URL + '?action=get_live_data')
+            .then(res => res.json())
+            .then(data => {
+                if (!silent) document.getElementById('loading-list').style.display = 'none';
+                if (data.status === 'success') {
+                    allLiveData = (data.data || []).reverse();
+                    if (currentPost) {
+                        const updatedPost = allLiveData.find(p => p.courseId === currentPost.courseId);
+                        if (updatedPost) {
+                            const isChanged = (currentPost.status !== updatedPost.status || currentPost.desc !== updatedPost.desc || currentPost.replies.length !== updatedPost.replies.length);
+                            currentPost = updatedPost;
+                            if (isChanged && document.getElementById('detail-section').style.display === 'block') { renderThread(currentPost); document.getElementById('detail-meta').innerHTML = `<span>編號: ${currentPost.courseId}</span> <span>狀態: ${currentPost.status}</span>`; }
+                        }
+                    }
+                    if (!silent) generateTypeNav(); filterPosts();     
+                } else { if (!silent) document.getElementById('post-list').innerHTML = `<div class="system-msg">載入失敗：${data.message}</div>`; }
+            })
+            .catch(err => { if (!silent) { document.getElementById('loading-list').style.display = 'none'; document.getElementById('post-list').innerHTML = '<div class="system-msg">連線發生錯誤。</div>'; } });
+        }
+
+        function startSilentPolling() {
+            if (pollingInterval) clearInterval(pollingInterval);
+            pollingInterval = setInterval(() => { fetchLiveData(true); }, 15000); 
+        }
+
+        function generateTypeNav() {
+            const container = document.getElementById('type-container'); const types = ['全部', ...new Set(allLiveData.map(item => item.status))];
+            container.innerHTML = types.map(type => `<button class="cat-btn ${currentStatus === type ? 'active' : ''}" onclick="setStatusFilter('${type}')">${type}</button>`).join('');
+        }
+
+        function setStatusFilter(status) { currentStatus = status; currentPage = 1; generateTypeNav(); filterPosts(); }
+        function clearDateFilter() { document.getElementById('datePicker').value = ''; filterPosts(); }
+
+        function filterPosts() {
+            const guestCta = document.getElementById('guest-cta-container'); const listContainer = document.getElementById('post-list'); const pagination = document.getElementById('pagination-container');
+            if (!currentUserEmail) { guestCta.style.display = 'flex'; listContainer.style.display = 'none'; pagination.style.display = 'none'; return; } 
+            else { guestCta.style.display = 'none'; listContainer.style.display = 'block'; pagination.style.display = 'flex'; }
+
+            currentSearchQuery = document.getElementById('searchInput').value.toLowerCase(); const selectedDate = document.getElementById('datePicker').value;
+            let filtered = allLiveData.filter(post => {
+                const isAdmin = currentUserEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase(); const validEmails = post.email.toLowerCase().split(/[\n,]+/).map(e => e.trim()); const isOwner = validEmails.includes(currentUserEmail.toLowerCase());
+                if (!isAdmin && !isOwner) return false;
+                const matchSearch = post.title.toLowerCase().includes(currentSearchQuery) || post.desc.toLowerCase().includes(currentSearchQuery);
+                const matchStatus = currentStatus === '全部' || post.status === currentStatus;
+                const matchDate = !selectedDate || post.date === selectedDate.replace(/-/g, '/'); 
+                return matchSearch && matchStatus && matchDate;
+            });
+            renderList(filtered);
+        }
+
+        function renderList(data) {
+            const listContainer = document.getElementById('post-list');
+            if (data.length === 0) { listContainer.innerHTML = '<div class="system-msg">目前沒有符合條件的陪跑紀錄。</div>'; document.getElementById('pagination-container').innerHTML = ''; return; }
+            listContainer.innerHTML = '';
+            const totalPages = Math.ceil(data.length / itemsPerPage); const start = (currentPage - 1) * itemsPerPage; const pagedData = data.slice(start, start + itemsPerPage);
+
+            pagedData.forEach((post, index) => {
+                let statusTagClass = 'tag-pending'; let cardBorderClass = 'status-pending';
+                if (post.status.includes('已回覆') || post.status.includes('完成')) { statusTagClass = 'tag-replied'; cardBorderClass = 'status-replied'; }
+
+                const card = document.createElement('div'); card.className = `post-card ${cardBorderClass}`;
+                card.innerHTML = `
+                    <div class="post-title-row"><span class="tag-badge ${statusTagClass}">${post.status}</span><h3 class="post-title">${post.title}</h3></div>
+                    <div class="post-meta"><span>學員: ${post.email.split('@')[0]}***</span><span>發布於: ${post.date} ${post.time}</span></div>
+                    ${getSummary(post.desc)}
+                    <button onclick="enterClass('${post.courseId}')" style="margin-top: 16px; background: var(--slate-blue);">進入日誌</button>
+                `;
+                listContainer.appendChild(card);
+                if (index < pagedData.length - 1) { const divider = document.createElement('div'); divider.className = 'visual-divider'; divider.innerHTML = '<div class="visual-divider-icon">▼</div>'; listContainer.appendChild(divider); }
+            });
+            renderPagination(totalPages);
+        }
+
+        function renderPagination(totalPages) {
+            const container = document.getElementById('pagination-container'); container.innerHTML = ''; if (totalPages <= 1) return;
+            for (let i = 1; i <= totalPages; i++) {
+                const btn = document.createElement('button'); btn.className = `page-btn ${currentPage === i ? 'active' : ''}`; btn.innerText = i;
+                btn.onclick = () => { currentPage = i; filterPosts(); window.scrollTo({ top: document.getElementById('list-section').offsetTop - 50, behavior: 'smooth' }); };
+                container.appendChild(btn);
+            }
+        }
+
+        window.onload = function() { initDeviceUI(); checkLogin(); setupAutoSave(); fetchLiveData(); startSilentPolling(); };
+
+    </script>
+</body>
+</html>
