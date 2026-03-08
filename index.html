@@ -526,7 +526,7 @@
 
         // 💡 解法一：將緩衝區大幅降至 512KB (524288 Bytes)，實現真正的「極速邊錄邊傳」！
         // 512KB 是 Google Drive API 規定的 256KB 的兩倍，大約每錄 1~2 秒就會傳送一次碎片
-        const CHUNK_SIZE_MULTIPLE = 524288;
+        const CHUNK_SIZE_MULTIPLE = 8388608;
         let streamStates = {
             post: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '', chunkIndexCounter: 0 },
             reply: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '', chunkIndexCounter: 0 }
