@@ -1157,7 +1157,7 @@
             return isAdmin ? '陪跑教練' : '學員追問';
         }
 
-        sync function startRecording(type) {
+        async function startRecording(type) {
             const titleInput = document.getElementById('post-title') ? document.getElementById('post-title').value.trim() : '';
             
             // 已經把強制阻擋的 if 判斷式刪除了！使用者現在可以直接無腦點擊錄影！
