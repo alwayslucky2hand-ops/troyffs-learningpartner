@@ -6,9 +6,7 @@
     <title>特洛伊-賦能陪跑日誌</title>
     <script src="https://www.youtube.com/iframe_api"></script>
     <style>
-        /* =========================================
-           特洛伊 AI 賦能陪跑日誌 - 極速直傳串流版
-           ========================================= */
+        /* (你原本的 CSS 完全保留，未做任何刪減) */
         :root {
             --primary-yellow: #F59E0B; 
             --primary-hover: #D97706;      
@@ -26,8 +24,6 @@
             --pill-text: #0369A1; 
         }
         *, *::before, *::after { box-sizing: border-box; }
-        
-        /* 鎖定網頁基底，嚴禁橫向擴張 */
         html { background: var(--bg-pure); width: 100%; max-width: 100vw; overflow-x: hidden; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif; line-height: 1.6; max-width: 500px; width: 100%; margin: 0 auto; padding: 0 15px 20px 15px; background: var(--panel-bg); color: var(--text-dark); min-height: 100vh; box-shadow: 0 0 20px rgba(0,0,0,0.05); -webkit-font-smoothing: antialiased; overflow-x: hidden; box-sizing: border-box; }
         
@@ -158,14 +154,13 @@
         .hidden-fields { display: none !important; }
         hr { border: 0; border-top: 1px dashed var(--glass-border); margin: 24px 0; }
         
-        /* 外層黑框設定：保證 100% 寬，絕不超出畫面 */
         .video-wrapper, .custom-player-container { 
             position: relative !important; 
             width: 100% !important; 
             max-width: 100% !important; 
             margin-top: 15px !important; 
             border-radius: 12px !important; 
-            overflow: hidden !important; /* 裁切所有突出物 */
+            overflow: hidden !important; 
             background: #000 !important; 
             border: 1px solid var(--glass-border) !important;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important; 
@@ -174,7 +169,6 @@
             clear: both !important;
         }
         
-        /* 影片比例維持框 */
         .video-container, .player-video-wrapper { 
             position: relative !important; 
             width: 100% !important; 
@@ -186,16 +180,15 @@
             margin: 0 !important;
         }
         
-        /* iframe 本體：直接對齊最左 (left:0) 和最右 (right:0)，拒絕任何偏移 */
         .video-container iframe, .player-video-wrapper iframe, .yt-placeholder { 
             position: absolute !important; 
             top: 0 !important; 
-            left: 0 !important;   /* 最左邊對齊黑框最左邊 */
-            right: 0 !important;  /* 最右邊對齊黑框最右邊 */
+            left: 0 !important;   
+            right: 0 !important;  
             bottom: 0 !important;
             width: 100% !important; 
             max-width: 100% !important; 
-            min-width: 100% !important; /* 強制寬度不縮水也不膨脹 */
+            min-width: 100% !important; 
             height: 100% !important; 
             border: none !important; 
             margin: auto !important; 
@@ -205,9 +198,6 @@
 
         .overlay-mask { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; cursor: pointer; background: transparent; }
 
-        /* =========================================
-           網頁內建錄影視窗與按鈕
-           ========================================= */
         .recorder-video-wrapper { position: relative; width: 100%; max-width: 100%; border-radius: 12px; overflow: hidden; background: #111; margin-top: 15px; aspect-ratio: 16/9; display: none; box-shadow: 0 6px 16px rgba(0,0,0,0.15); -webkit-tap-highlight-color: transparent; }
         .recorder-video-wrapper video { width: 100%; height: 100%; object-fit: contain; display: block; background: transparent; pointer-events: none; }
         .recorder-video-wrapper:fullscreen video, .recorder-video-wrapper:-webkit-full-screen video, .recorder-video-wrapper.pseudo-fullscreen video { object-fit: cover !important; }
@@ -227,9 +217,6 @@
         .glass-btn.btn-record:hover { background-color: transparent; }
         .glass-btn.btn-record:hover .svg-icon { fill: #ff7875; }
 
-        /* =========================================
-           自製 YouTube 播放器專用控制列設定
-           ========================================= */
         .custom-player-container:fullscreen { border-radius: 0; background: #000; }
         .custom-player-container:-webkit-full-screen { border-radius: 0; background: #000; }
         .custom-player-container.pseudo-fullscreen { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 99999 !important; border-radius: 0 !important; background: #000 !important; margin: 0 !important; display: flex; align-items: center; justify-content: center; }
@@ -318,7 +305,7 @@
     <div class="section" id="publish-section" style="display: none; border-left: 5px solid var(--primary-yellow);">
         <h3 style="margin-top:0;">發起新提問</h3>
         <p style="margin-bottom: 12px; font-size: 0.95rem;">
-            <span class="hint-label">系統升級</span><span style="color: var(--accent-green); font-weight: bold;">支援自動防當機每3分存檔與切換視角！</span>
+            <span class="hint-label">系統升級</span><span style="color: var(--accent-green); font-weight: bold;">支援零等待邊錄邊傳！結束錄影秒發布！</span>
         </p>
 
         <div class="media-toggle-container">
@@ -437,7 +424,7 @@
             <div style="margin-top:32px; border-top: 2px dashed var(--glass-border); padding-top: 24px;">
                 <h3 style="margin-top:0;">新增影音回覆 / 追問</h3>
                 <p style="margin-bottom: 12px; font-size: 0.95rem;">
-                    <span class="hint-label">系統升級</span><span style="color: var(--accent-green); font-weight: bold;">支援零容量焦慮雙軌雲端直傳引擎！</span>
+                    <span class="hint-label">系統升級</span><span style="color: var(--accent-green); font-weight: bold;">支援零等待邊錄邊傳！結束錄影秒發布！</span>
                 </p>
 
                 <div class="media-toggle-container">
@@ -537,12 +524,12 @@
         let pendingImages = { post: [], reply: [] }; 
         let currentLocalBlob = { post: null, reply: null }; 
 
-        // 串流直傳狀態管理 (將緩衝區降至 2MB，大幅減輕 CPU 轉碼負擔，並加快清空佇列的速度)
-        // 註：Google Drive 規定切塊必須是 256KB 的倍數，2097152 剛好是 256KB * 8
-        const CHUNK_SIZE_MULTIPLE = 8388608;
+        // 💡 解法一：將緩衝區大幅降至 512KB (524288 Bytes)，實現真正的「極速邊錄邊傳」！
+        // 512KB 是 Google Drive API 規定的 256KB 的兩倍，大約每錄 1~2 秒就會傳送一次碎片
+        const CHUNK_SIZE_MULTIPLE = 524288;
         let streamStates = {
-            post: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '' },
-            reply: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '' }
+            post: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '', chunkIndexCounter: 0 },
+            reply: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '', chunkIndexCounter: 0 }
         };
 
         // YouTube 播放器實例管理
@@ -797,19 +784,18 @@
         }
 
         // ==========================================
-        // 核心優化：GAS 隱形轉發串流引擎 (修復 Offset 衝突與防彈佇列)
+        // 核心優化：邊錄邊傳與號碼牌發放引擎 (極速序列無感傳輸)
         // ==========================================
         async function processUploadQueue(type) {
             const state = streamStates[type];
             if (!state || state.isUploading || state.queue.length === 0) return;
             state.isUploading = true;
 
-            // 1. 從佇列中取出一個碎塊
+            // 取出碎片，這包含了我們總結的「號碼牌 (chunkIndex)」
             const chunkObj = state.queue.shift();
-            const { blob, isFinal, isSplitting, driveUrl, geminiUrl, offset } = chunkObj; // 💡 關鍵修復：從 chunkObj 取出它專屬的網址與進度
+            const { blob, isFinal, isSplitting, driveUrl, geminiUrl, offset, chunkIndex } = chunkObj; 
 
             try {
-                // 防呆：如果是空資料
                 if (blob.size === 0 && isFinal) {
                     if (!isSplitting) {
                         state.isFinalized = true;
@@ -822,16 +808,16 @@
 
                 const chunkBase64 = await blobToBase64(blob);
 
-                let progressText = `雲端同步中... (已上傳 ${(offset / 1024 / 1024).toFixed(1)} MB)`;
+                // UI 更新：讓使用者知道第幾個碎片(號碼牌)正在背景無感傳輸
+                let progressText = `邊錄邊傳同步中... (碎片 #${chunkIndex}，已上傳 ${(offset / 1024 / 1024).toFixed(1)} MB)`;
                 if (isFinal || currentRecordType !== type) {
-                    // 這裡的 % 數計算可能因為多 Part 而稍微不準，但不影響上傳，顯示文字即可
-                    progressText = `正在雲端封裝此片段...`;
+                    progressText = `正在雲端封裝此片段... (即將完成)`;
                 }
                 showRecorderMsg(type, `<span class="spinner"></span> ${progressText} (請勿關閉網頁)`, false, true);
 
                 const payloadTotalSize = isFinal ? (offset + blob.size) : '*';
 
-                // 2. 發送請求，使用這個碎塊「專屬」的參數
+                // 將號碼牌與資料一併送給後端的雙軌引擎
                 const response = await fetch(GAS_LIVE_URL, {
                     method: 'POST',
                     redirect: 'follow',
@@ -839,19 +825,18 @@
                     body: JSON.stringify({
                         action: 'upload_chunk',
                         isDualTrack: true,
-                        uploadUrlDrive: driveUrl, // 💡 使用綁定的 Drive 網址
-                        uploadUrlGemini: geminiUrl, // 💡 使用綁定的 Gemini 網址
+                        uploadUrlDrive: driveUrl, 
+                        uploadUrlGemini: geminiUrl, 
                         chunkBase64: chunkBase64,
-                        start: offset, // 💡 使用綁定的進度
-                        totalSize: payloadTotalSize
+                        start: offset, 
+                        totalSize: payloadTotalSize,
+                        chunkIndex: chunkIndex // 發送號碼牌資訊
                     })
                 });
 
                 const data = await response.json();
 
                 if (data.status === 'success' || data.status === 'resume') {
-                    // 如果成功，不需要再更新 state.offset，因為我們現在是用傳入的
-                    
                     if (isFinal && data.status === 'success') {
                         state.completedParts.push({
                             driveId: data.driveId,
@@ -874,17 +859,18 @@
                 console.error("Upload error caught:", e);
                 showRecorderMsg(type, `網路波動 (${e.message})，系統將自動重試...`, true, true);
                 
-                // 發生錯誤，將這塊碎片「塞回」佇列最前面，保留它專屬的網址與進度
+                // 發生錯誤，將碎片塞回佇列最前面重試
                 state.queue.unshift(chunkObj);
                 
                 setTimeout(() => { 
                     state.isUploading = false; 
                     processUploadQueue(type); 
-                }, 3000);
+                }, 2000);
                 return;
             }
 
             state.isUploading = false;
+            // 極速呼叫下一個，因為 512KB 很小，這裡就像併發一樣瞬間清空佇列
             processUploadQueue(type);
         }
 
@@ -909,7 +895,7 @@
             const msgEl = document.getElementById(elId); if(!msgEl) return;
             let badgeHtml = '';
             if (isError) badgeHtml = '<span class="status-icon status-error">錯誤</span>';
-            else if (text.includes("雲端同步中") || text.includes("進度") || text.includes("存入")) badgeHtml = '<span class="status-icon" style="background:#DBEAFE; color:#1E40AF;">雲端處理</span>';
+            else if (text.includes("邊錄邊傳") || text.includes("進度") || text.includes("存入")) badgeHtml = '<span class="status-icon" style="background:#DBEAFE; color:#1E40AF;">雲端處理</span>';
             else if (text.includes("錄製中")) badgeHtml = '<span class="status-icon" style="background:#FEE2E2; color:#991B1B;">錄製中</span>';
             else if (text.includes("切割") || text.includes("封裝")) badgeHtml = '<span class="status-icon" style="background:#FCA5A5; color:#7F1D1D;">防護運作中</span>';
             else if (text.includes("暫停") || text.includes("切換")) badgeHtml = '<span class="status-icon" style="background:#FEF3C7; color:#B45309;">暫停</span>';
@@ -975,7 +961,6 @@
                 }
                 
                 internalCanvas.style.position = 'fixed'; internalCanvas.style.top = '-9999px'; internalCanvas.style.opacity = '0'; document.body.appendChild(internalCanvas);
-                // 💡 流暢優化：關閉 alpha 通道以提升渲染速度，並移除極耗效能的 imageSmoothingQuality
                 internalCtx = internalCanvas.getContext('2d', { alpha: false });
                 internalCtx.imageSmoothingEnabled = true; 
                 
@@ -992,7 +977,6 @@
 
                     function drawMobileFrame() {
                         if (!internalCtx) return; 
-                        // 💡 流暢優化：改用 requestAnimationFrame 同步螢幕更新率
                         drawLoopId = requestAnimationFrame(drawMobileFrame);
                         
                         const currentIsLandscape = window.innerWidth > window.innerHeight;
@@ -1059,7 +1043,6 @@
 
                     function drawPcFrame() {
                         if (!internalCtx) return; 
-                        // 💡 流暢優化：改用 requestAnimationFrame 同步螢幕更新率
                         drawLoopId = requestAnimationFrame(drawPcFrame);
 
                         internalCtx.fillStyle = '#111'; internalCtx.fillRect(0, 0, internalCanvas.width, internalCanvas.height);
@@ -1083,7 +1066,6 @@
                     showRecorderMsg(type, "視窗/畫面已連接！點擊開始錄製。", false, true);
                 }
 
-                // 💡 流暢優化：限制 Canvas 擷取最高幀率為 30FPS
                 let tracks = [...internalCanvas.captureStream(30).getVideoTracks(), ...dest.stream.getAudioTracks()]; combinedStream = new MediaStream(tracks);
                 const previewVideo = document.getElementById(`${type}-preview-video`); 
                 previewVideo.srcObject = combinedStream; 
@@ -1121,7 +1103,6 @@
                 state.partIndex++;
                 
                 try {
-                    // 使用已儲存的 folderId 和資訊，再次呼叫 init_upload
                     const initRes = await fetch(GAS_LIVE_URL, {
                         method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                         body: JSON.stringify({ 
@@ -1131,7 +1112,7 @@
                             courseId: state.tempCourseId,
                             role: getRoleForType(type),
                             partIndex: state.partIndex,
-                            folderId: state.folderId // 指定進入同一個資料夾
+                            folderId: state.folderId 
                         })
                     });
                     const initData = await initRes.json();
@@ -1141,6 +1122,7 @@
                     state.geminiUrl = initData.uploadUrlGemini;
                     state.buffer = new Blob([], { type: mediaRecorder.mimeType || 'video/mp4' });
                     state.offset = 0;
+                    state.chunkIndexCounter = 0; // 新的 Part，號碼牌重算
                     state.isFinalized = false;
 
                     recordedChunks = [];
@@ -1161,8 +1143,6 @@
 
         async function startRecording(type) {
             const titleInput = document.getElementById('post-title') ? document.getElementById('post-title').value.trim() : '';
-            
-            // 已經把強制阻擋的 if 判斷式刪除了！使用者現在可以直接無腦點擊錄影！
 
             showRecorderMsg(type, "正在初始化雲端專屬資料夾與直傳通道...", false, true);
             
@@ -1171,7 +1151,6 @@
             else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264,opus') || MediaRecorder.isTypeSupported('video/webm;codecs=h264')) { mimeTypeToUse = 'video/webm;codecs=h264,opus'; } 
             else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) { mimeTypeToUse = 'video/webm;codecs=vp8,opus'; }
 
-            // 產生暫時的 CourseId
             const now = new Date();
             const tempCourseId = type === 'post' 
                 ? `FFS-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`
@@ -1202,7 +1181,7 @@
                     buffer: new Blob([], { type: mimeTypeToUse }), offset: 0, isUploading: false, queue: [],
                     driveId: '', geminiUri: '', geminiName: '', isFinalized: false,
                     partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false,
-                    folderId: initData.folderId, tempCourseId: tempCourseId
+                    folderId: initData.folderId, tempCourseId: tempCourseId, chunkIndexCounter: 0
                 };
             } catch(e) {
                 showRecorderMsg(type, "通道與資料夾建立失敗: " + e.message, true, true);
@@ -1210,7 +1189,6 @@
             }
 
             recordedChunks = []; 
-            // 💡 流暢優化：降低瀏覽器編碼壓力，PC端 4Mbps、手機端 2.5Mbps 就足以維持 1080p 清晰度
             const targetBps = isMobileDevice() ? 2500000 : 4000000;
 
             let options = { videoBitsPerSecond: targetBps };
@@ -1227,13 +1205,15 @@
                     
                     state.buffer = new Blob([state.buffer, e.data], { type: mimeTypeToUse });
                     
+                    // 💡 解法一觸發點：只要緩衝區滿 512KB (極小碎片)，就立刻推進佇列，實現邊錄邊傳
                     if (state.buffer.size >= CHUNK_SIZE_MULTIPLE) {
                         const bytesToUpload = Math.floor(state.buffer.size / CHUNK_SIZE_MULTIPLE) * CHUNK_SIZE_MULTIPLE;
                         const chunkToUpload = state.buffer.slice(0, bytesToUpload);
                         state.buffer = state.buffer.slice(bytesToUpload);
                         
-                        // 💡 關鍵修復：綁定當下的資訊
+                        // 發放號碼牌 (Chunk Index) 進入佇列
                         state.queue.push({ 
+                            chunkIndex: state.chunkIndexCounter++,
                             blob: chunkToUpload, 
                             isFinal: false, 
                             isSplitting: false,
@@ -1241,7 +1221,7 @@
                             geminiUrl: state.geminiUrl,
                             offset: state.offset
                         });
-                        state.offset += chunkToUpload.size; // 更新整體進度
+                        state.offset += chunkToUpload.size; 
                         
                         processUploadQueue(type);
                     }
@@ -1253,8 +1233,8 @@
                 
                 let finalBlob = state.buffer && state.buffer.size > 0 ? state.buffer : new Blob([], { type: mimeTypeToUse });
 
-                // 💡 關鍵修復：綁定當下的資訊
                 state.queue.push({ 
+                    chunkIndex: state.chunkIndexCounter++, // 最後一塊的號碼牌
                     blob: finalBlob, 
                     isFinal: true, 
                     isSplitting: state.isSplitting,
@@ -1263,7 +1243,6 @@
                     offset: state.offset
                 });
                 
-                // 重置 Buffer (不需要重置 offset，因為 triggerSplit 會處理)
                 state.buffer = new Blob([], { type: mimeTypeToUse });
                 processUploadQueue(type);
 
@@ -1332,7 +1311,6 @@
             const state = streamStates[type];
             if (state && state.splitTimer) clearInterval(state.splitTimer);
             if (state) {
-                // 移除會造成 CORS 錯誤的 Drive DELETE，專注於可刪除的 Gemini 檔案
                 state.completedParts.forEach(part => {
                     if (part.geminiName) {
                         try {
@@ -1520,7 +1498,6 @@
                 </div>`;
             });
 
-            // 處理 Google Drive 檔案 (動態展開/收合式影片列表)
             if (driveUrls.length > 1) {
                 let itemsHtml = driveUrls.map((item, idx) => {
                     return `
@@ -1563,11 +1540,11 @@
                 let vid = el.dataset.vid;
                 if(!ytPlayers[uid]) {
                     ytPlayers[uid] = new YT.Player(el.id, {
-    videoId: vid,
-    width: '100%',   
-    height: '100%',  
-    playerVars: { 'controls': 0, 'disablekb': 1, 'rel': 0, 'modestbranding': 1, 'playsinline': 1, 'iv_load_policy': 3, 'vq': 'hd1080' },
-    events: {
+                        videoId: vid,
+                        width: '100%',   
+                        height: '100%',  
+                        playerVars: { 'controls': 0, 'disablekb': 1, 'rel': 0, 'modestbranding': 1, 'playsinline': 1, 'iv_load_policy': 3, 'vq': 'hd1080' },
+                        events: {
                             'onReady': (e) => onPlayerReady(uid, e),
                             'onStateChange': (e) => onPlayerStateChange(uid, e)
                         }
@@ -1776,7 +1753,6 @@
 
                     finalDesc += `\n\n[SYS:處理中] 影片已備份至雲端硬碟 (共 ${state.completedParts.length} 個片段)，AI 正在進行深度解析...\n${geminiFileDataArray.join('\n')}`;
                     
-                    // 從 state 取出剛剛建立的 courseId，確保前後端一致
                     var submittedCourseId = state.tempCourseId;
                 }
 
@@ -1784,7 +1760,7 @@
                     method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({ 
                         action: 'add_post', 
-                        courseId: submittedCourseId, // 加入 courseId
+                        courseId: submittedCourseId, 
                         email: currentUserEmail, 
                         title: finalTitle, 
                         desc: finalDesc, 
@@ -1869,9 +1845,6 @@
             }
         }
 
-        // ==========================================
-        // 意見回饋與渲染 Thread
-        // ==========================================
         function sendFeedback(courseId, satisfaction) {
             const box = document.getElementById(`feedback-box-${courseId}`); if(box) box.innerHTML = '<span class="spinner"></span> 正在記錄您的回饋...';
             fetch(GAS_LIVE_URL, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'submit_feedback', courseId: courseId, satisfaction: satisfaction }) })
@@ -1966,7 +1939,7 @@
         }
 
         // ==========================================
-        // 1. 系統提示與畫面滾動工具
+        // UI 工具與過濾
         // ==========================================
         function showAppMsg(elId, msg, isError = false) {
             const el = document.getElementById(elId);
@@ -1980,9 +1953,6 @@
             document.getElementById('login-section').scrollIntoView({ behavior: 'smooth' });
         }
 
-        // ==========================================
-        // 2. 登入驗證流程
-        // ==========================================
         function requestOTP() {
             const email = document.getElementById('email').value.trim();
             if (!email) return showAppMsg('otp-msg', '請輸入 Email', true);
@@ -1992,28 +1962,18 @@
             btn.innerHTML = '<span class="spinner"></span> 發送中...';
 
             fetch(GAS_LIVE_URL, {
-                method: 'POST',
-                redirect: 'follow',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ action: 'requestOTP', email: email })
             })
             .then(res => res.json())
             .then(data => {
-                btn.disabled = false;
-                btn.innerText = '寄送驗證碼';
+                btn.disabled = false; btn.innerText = '寄送驗證碼';
                 if (data.status === 'success') {
-                    document.getElementById('step-1').style.display = 'none';
-                    document.getElementById('step-2').style.display = 'block';
+                    document.getElementById('step-1').style.display = 'none'; document.getElementById('step-2').style.display = 'block';
                     showAppMsg('login-msg', '驗證碼已發送至您的信箱，請查收！');
-                } else {
-                    showAppMsg('otp-msg', data.message || '發送失敗，請重試', true);
-                }
+                } else { showAppMsg('otp-msg', data.message || '發送失敗，請重試', true); }
             })
-            .catch(err => {
-                btn.disabled = false;
-                btn.innerText = '寄送驗證碼';
-                showAppMsg('otp-msg', '系統連線錯誤，請稍後再試', true);
-            });
+            .catch(err => { btn.disabled = false; btn.innerText = '寄送驗證碼'; showAppMsg('otp-msg', '系統連線錯誤，請稍後再試', true); });
         }
 
         function verifyLogin() {
@@ -2022,65 +1982,46 @@
             if (!otp) return showAppMsg('login-msg', '請輸入驗證碼', true);
 
             const btn = document.getElementById('btn-login');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner"></span> 驗證中...';
+            btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 驗證中...';
 
             fetch(GAS_LIVE_URL, {
-                method: 'POST',
-                redirect: 'follow',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ action: 'verifyOTP', email: email, otp: otp })
             })
             .then(res => res.json())
             .then(data => {
-                btn.disabled = false;
-                btn.innerText = '進入日誌'; 
+                btn.disabled = false; btn.innerText = '進入日誌'; 
                 if (data.status === 'success') {
                     currentUserEmail = email;
-                    localStorage.setItem('user_email', email);
-                    localStorage.setItem('login_timestamp', Date.now().toString());
+                    localStorage.setItem('user_email', email); localStorage.setItem('login_timestamp', Date.now().toString());
 
                     document.getElementById('login-status').innerText = `目前狀態：已登入 (${email})`;
                     document.getElementById('login-status').style.color = 'var(--accent-green)';
                     document.getElementById('step-2').style.display = 'none';
                     document.getElementById('btn-logout').style.display = 'block';
-                    
                     document.getElementById('publish-section').style.display = 'block';
                     fetchLiveData(); 
-                } else {
-                    showAppMsg('login-msg', data.message || '驗證碼錯誤', true);
-                }
+                } else { showAppMsg('login-msg', data.message || '驗證碼錯誤', true); }
             })
-            .catch(err => {
-                btn.disabled = false;
-                btn.innerText = '進入日誌'; 
-                showAppMsg('login-msg', '系統連線錯誤', true);
-            });
+            .catch(err => { btn.disabled = false; btn.innerText = '進入日誌'; showAppMsg('login-msg', '系統連線錯誤', true); });
         }
 
         function cancelLogin() {
-            document.getElementById('step-2').style.display = 'none';
-            document.getElementById('step-1').style.display = 'flex';
+            document.getElementById('step-2').style.display = 'none'; document.getElementById('step-1').style.display = 'flex';
             document.getElementById('otp-code').value = '';
         }
 
         function logout() {
             currentUserEmail = '';
-            localStorage.removeItem('user_email');
-            localStorage.removeItem('login_timestamp');
-
+            localStorage.removeItem('user_email'); localStorage.removeItem('login_timestamp');
             document.getElementById('login-status').innerText = '目前狀態：未登入 (訪客)';
             document.getElementById('login-status').style.color = 'var(--primary-yellow)';
             document.getElementById('btn-logout').style.display = 'none';
-            document.getElementById('step-1').style.display = 'flex';
-            document.getElementById('email').value = '';
+            document.getElementById('step-1').style.display = 'flex'; document.getElementById('email').value = '';
             document.getElementById('publish-section').style.display = 'none';
             fetchLiveData(); 
         }
 
-        // ==========================================
-        // 3. 列表載入與靜默渲染流程
-        // ==========================================
         function fetchLiveData(silent = false) {
             if (!silent) {
                 document.getElementById('list-section').style.display = 'block';
@@ -2124,9 +2065,7 @@
 
         function startSilentPolling() {
             if (pollingInterval) clearInterval(pollingInterval);
-            pollingInterval = setInterval(() => {
-                fetchLiveData(true); 
-            }, 15000); 
+            pollingInterval = setInterval(() => { fetchLiveData(true); }, 15000); 
         }
 
         function generateTypeNav() {
@@ -2138,15 +2077,11 @@
         }
 
         function setStatusFilter(status) {
-            currentStatus = status;
-            currentPage = 1;
-            generateTypeNav(); 
-            filterPosts();
+            currentStatus = status; currentPage = 1; generateTypeNav(); filterPosts();
         }
 
         function clearDateFilter() {
-            document.getElementById('datePicker').value = '';
-            filterPosts();
+            document.getElementById('datePicker').value = ''; filterPosts();
         }
 
         function filterPosts() {
@@ -2155,14 +2090,9 @@
             const pagination = document.getElementById('pagination-container');
 
             if (!currentUserEmail) {
-                guestCta.style.display = 'flex';
-                listContainer.style.display = 'none';
-                pagination.style.display = 'none';
-                return;
+                guestCta.style.display = 'flex'; listContainer.style.display = 'none'; pagination.style.display = 'none'; return;
             } else {
-                guestCta.style.display = 'none';
-                listContainer.style.display = 'block';
-                pagination.style.display = 'flex';
+                guestCta.style.display = 'none'; listContainer.style.display = 'block'; pagination.style.display = 'flex';
             }
 
             currentSearchQuery = document.getElementById('searchInput').value.toLowerCase();
@@ -2188,9 +2118,7 @@
             const listContainer = document.getElementById('post-list');
             
             if (data.length === 0) {
-                listContainer.innerHTML = '<div class="system-msg">目前沒有符合條件的陪跑紀錄。</div>';
-                document.getElementById('pagination-container').innerHTML = '';
-                return;
+                listContainer.innerHTML = '<div class="system-msg">目前沒有符合條件的陪跑紀錄。</div>'; document.getElementById('pagination-container').innerHTML = ''; return;
             }
 
             listContainer.innerHTML = '';
@@ -2203,8 +2131,7 @@
                 let statusTagClass = 'tag-pending';
                 let cardBorderClass = 'status-pending';
                 if (post.status.includes('已回覆') || post.status.includes('完成')) {
-                    statusTagClass = 'tag-replied';
-                    cardBorderClass = 'status-replied';
+                    statusTagClass = 'tag-replied'; cardBorderClass = 'status-replied';
                 }
 
                 const card = document.createElement('div');
@@ -2241,28 +2168,15 @@
 
             for (let i = 1; i <= totalPages; i++) {
                 const btn = document.createElement('button');
-                btn.className = `page-btn ${currentPage === i ? 'active' : ''}`;
-                btn.innerText = i;
-                btn.onclick = () => { 
-                    currentPage = i; 
-                    filterPosts(); 
-                    window.scrollTo({ top: document.getElementById('list-section').offsetTop - 50, behavior: 'smooth' }); 
-                };
+                btn.className = `page-btn ${currentPage === i ? 'active' : ''}`; btn.innerText = i;
+                btn.onclick = () => { currentPage = i; filterPosts(); window.scrollTo({ top: document.getElementById('list-section').offsetTop - 50, behavior: 'smooth' }); };
                 container.appendChild(btn);
             }
         }
 
-        // ==========================================
-        // 4. 網頁初始啟動設定
-        // ==========================================
         window.onload = function() {
-            initDeviceUI();
-            checkLogin(); 
-            setupAutoSave(); 
-            fetchLiveData(); 
-            startSilentPolling(); 
+            initDeviceUI(); checkLogin(); setupAutoSave(); fetchLiveData(); startSilentPolling(); 
         };
-
     </script>
 </body>
 </html>
