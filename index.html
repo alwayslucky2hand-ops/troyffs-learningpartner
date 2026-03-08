@@ -27,7 +27,6 @@
         }
         *, *::before, *::after { box-sizing: border-box; }
         
-        /* 鎖定網頁基底，嚴禁橫向擴張 */
         html { background: var(--bg-pure); width: 100%; max-width: 100vw; overflow-x: hidden; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif; line-height: 1.6; max-width: 500px; width: 100%; margin: 0 auto; padding: 0 15px 20px 15px; background: var(--panel-bg); color: var(--text-dark); min-height: 100vh; box-shadow: 0 0 20px rgba(0,0,0,0.05); -webkit-font-smoothing: antialiased; overflow-x: hidden; box-sizing: border-box; }
         
@@ -158,61 +157,20 @@
         .hidden-fields { display: none !important; }
         hr { border: 0; border-top: 1px dashed var(--glass-border); margin: 24px 0; }
         
-        /* =========================================
-           🔥🔥 終極修復 4：絕對霸道的左右死鎖防禦陣線 🔥🔥
-           （強制讓播放器的最左、最右「死死對齊」黑底的最左與最右）
-           ========================================= */
-
-        /* 外層黑框設定：保證 100% 寬，絕不超出畫面 */
         .video-wrapper, .custom-player-container { 
-            position: relative !important; 
-            width: 100% !important; 
-            max-width: 100% !important; 
-            margin-top: 15px !important; 
-            border-radius: 12px !important; 
-            overflow: hidden !important; /* 裁切所有突出物 */
-            background: #000 !important; 
-            border: 1px solid var(--glass-border) !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important; 
-            box-sizing: border-box !important; 
-            display: block !important; 
-            clear: both !important;
+            position: relative !important; width: 100% !important; max-width: 100% !important; margin-top: 15px !important; border-radius: 12px !important; overflow: hidden !important; background: #000 !important; border: 1px solid var(--glass-border) !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important; box-sizing: border-box !important; display: block !important; clear: both !important;
         }
         
-        /* 影片比例維持框 */
         .video-container, .player-video-wrapper { 
-            position: relative !important; 
-            width: 100% !important; 
-            max-width: 100% !important; 
-            padding-bottom: 56.25% !important; /* 16:9 */
-            height: 0 !important; 
-            overflow: hidden !important; 
-            box-sizing: border-box !important; 
-            margin: 0 !important;
+            position: relative !important; width: 100% !important; max-width: 100% !important; padding-bottom: 56.25% !important; height: 0 !important; overflow: hidden !important; box-sizing: border-box !important; margin: 0 !important;
         }
         
-        /* iframe 本體：直接對齊最左 (left:0) 和最右 (right:0)，拒絕任何偏移 */
         .video-container iframe, .player-video-wrapper iframe, .yt-placeholder { 
-            position: absolute !important; 
-            top: 0 !important; 
-            left: 0 !important;   /* 最左邊對齊黑框最左邊 */
-            right: 0 !important;  /* 最右邊對齊黑框最右邊 */
-            bottom: 0 !important;
-            width: 100% !important; 
-            max-width: 100% !important; 
-            min-width: 100% !important; /* 強制寬度不縮水也不膨脹 */
-            height: 100% !important; 
-            border: none !important; 
-            margin: auto !important; 
-            padding: 0 !important; 
-            box-sizing: border-box !important; 
+            position: absolute !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100% !important; max-width: 100% !important; min-width: 100% !important; height: 100% !important; border: none !important; margin: auto !important; padding: 0 !important; box-sizing: border-box !important; 
         }
 
         .overlay-mask { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; cursor: pointer; background: transparent; }
 
-        /* =========================================
-           網頁內建錄影視窗與按鈕
-           ========================================= */
         .recorder-video-wrapper { position: relative; width: 100%; max-width: 100%; border-radius: 12px; overflow: hidden; background: #111; margin-top: 15px; aspect-ratio: 16/9; display: none; box-shadow: 0 6px 16px rgba(0,0,0,0.15); -webkit-tap-highlight-color: transparent; }
         .recorder-video-wrapper video { width: 100%; height: 100%; object-fit: contain; display: block; background: transparent; pointer-events: none; }
         .recorder-video-wrapper:fullscreen video, .recorder-video-wrapper:-webkit-full-screen video, .recorder-video-wrapper.pseudo-fullscreen video { object-fit: cover !important; }
@@ -232,9 +190,6 @@
         .glass-btn.btn-record:hover { background-color: transparent; }
         .glass-btn.btn-record:hover .svg-icon { fill: #ff7875; }
 
-        /* =========================================
-           自製 YouTube 播放器專用控制列設定
-           ========================================= */
         .custom-player-container:fullscreen { border-radius: 0; background: #000; }
         .custom-player-container:-webkit-full-screen { border-radius: 0; background: #000; }
         .custom-player-container.pseudo-fullscreen { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 99999 !important; border-radius: 0 !important; background: #000 !important; margin: 0 !important; display: flex; align-items: center; justify-content: center; }
@@ -266,24 +221,6 @@
             .custom-controls { padding: 8px 4px; gap: 2px; }
             .player-btn { width: 30px; height: 30px; padding: 2px; }
         }
-
-        .troy-carousel { position: relative; width: 100%; max-width: 100%; aspect-ratio: 16/9; overflow: hidden; border-radius: 12px; background: #000; margin-top: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); user-select: none; -webkit-touch-callout: none; transition: all 0.3s ease; box-sizing: border-box;}
-        .troy-carousel.hide-cursor { cursor: none !important; }
-        .tc-track { display: flex; width: 100%; height: 100%; transition: transform 0.3s ease-in-out; cursor: grab; touch-action: pan-y; }
-        .tc-track:active { cursor: grabbing; }
-        .tc-slide { flex: 0 0 100%; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
-        .tc-slide img { max-width: 100%; max-height: 100%; object-fit: contain; pointer-events: none; }
-        
-        .tc-controls-bar { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.75); display: flex; align-items: center; padding: 12px 10px; box-sizing: border-box; z-index: 20; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
-        .tc-controls-bar.show-controls { opacity: 1; pointer-events: auto; }
-        .tc-btn { background: none; border: none; color: white; cursor: pointer; padding: 4px; transition: color 0.2s, transform 0.1s; display: flex; align-items: center; justify-content: center; margin: 0; }
-        .tc-btn:hover { color: var(--primary-yellow); transform: scale(1.1); }
-        .tc-indicators-wrapper { flex-grow: 1; display: flex; justify-content: center; gap: 8px; align-items: center; margin: 0 15px; }
-        .tc-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.4); transition: all 0.3s ease; cursor: pointer; margin: 0;}
-        .tc-dot.active { background: var(--primary-yellow); width: 18px; border-radius: 4px; box-shadow: 0 0 8px rgba(245, 158, 11, 0.6); }
-
-        .troy-carousel:fullscreen { border-radius: 0; }
-        .troy-carousel:-webkit-full-screen { border-radius: 0; }
     </style>
 </head>
 <body>
@@ -341,7 +278,7 @@
     <div class="section" id="publish-section" style="display: none; border-left: 5px solid var(--primary-yellow);">
         <h3 style="margin-top:0;">發起新提問</h3>
         <p style="margin-bottom: 12px; font-size: 0.95rem;">
-            <span class="hint-label">系統升級</span><span style="color: var(--accent-green); font-weight: bold;">支援自動防當機每5分存檔與切換視角！</span>
+            <span class="hint-label">系統升級</span><span style="color: var(--accent-green); font-weight: bold;">支援錄影當下即刻建檔防護與自動折疊！</span>
         </p>
 
         <div class="media-toggle-container">
@@ -560,134 +497,35 @@
         let pendingImages = { post: [], reply: [] }; 
         let currentLocalBlob = { post: null, reply: null }; 
 
-        // 串流直傳狀態管理 (8MB 智能緩衝引擎，加上每5分自動切割防護機制)
+        // 輔助生成專屬 ID
+        function generateAutoId() {
+            const d = new Date(); const pad = n => (n < 10 ? '0'+n : n);
+            return `FFS-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+        }
+
+        // 串流直傳狀態管理 (每3分鐘自動切割 + 即刻建資料夾與命名)
         const CHUNK_SIZE_MULTIPLE = 8388608; 
         let streamStates = {
-            post: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false },
-            reply: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false }
+            post: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, sessionCourseId: '', role: '', folderId: '' },
+            reply: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, sessionCourseId: '', role: '', folderId: '' }
         };
 
-        // YouTube 播放器實例管理
-        let ytPlayers = {};
-        let ytUpdateTimers = {};
-        let ytHideTimers = {};
+        let ytPlayers = {}; let ytUpdateTimers = {}; let ytHideTimers = {};
 
-        // 錄影底層引擎
         let mediaRecorder; let recordedChunks = []; 
         let combinedStream, screenStream, micStream, audioContext; 
         let currentRecordType = ''; 
-        let isPaused = false;
-        let activeVideoSource = 'screen'; 
-        let currentFacingMode = 'user';
-        let internalCanvas, internalCtx, drawLoopId;
-        let screenHiddenVideo, cameraHiddenVideo;
-        let lastDrawTime = 0; const fpsInterval = 1000 / 30; // 鎖定 30FPS 防當機
-        
+        let isPaused = false; let activeVideoSource = 'screen'; let currentFacingMode = 'user';
+        let internalCanvas, internalCtx, drawLoopId; let screenHiddenVideo, cameraHiddenVideo;
+        let lastDrawTime = 0; const fpsInterval = 1000 / 30;
         let recorderHideTimers = { post: null, reply: null }; 
 
-        // --- SVG Icons Definition ---
         const pauseSvg = `<svg viewBox="0 0 24 24" class="svg-icon"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
         const playSvg = `<svg viewBox="0 0 24 24" class="svg-icon"><path d="M8 5v14l11-7z"/></svg>`;
         const fullScreenSvg = `<svg viewBox="0 0 24 24" class="svg-icon" style="width:20px;height:20px;"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>`;
         const muteSvg = `<svg viewBox="0 0 24 24" class="svg-icon" style="width:20px;height:20px;"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.73v2.06c2.89.86 5 3.54 5 6.67zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>`;
         const volLowSvg = `<svg viewBox="0 0 24 24" class="svg-icon" style="width:20px;height:20px;"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>`;
         const volHighSvg = `<svg viewBox="0 0 24 24" class="svg-icon" style="width:20px;height:20px;"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
-        const prevSvg = `<svg viewBox="0 0 24 24" class="svg-icon" style="width:24px;height:24px;"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/></svg>`;
-        const nextSvg = `<svg viewBox="0 0 24 24" class="svg-icon" style="width:24px;height:24px;"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>`;
-
-        // --- 多圖無限輪播器狀態與邏輯 ---
-        let troyCarousels = {};
-        let carouselHideTimers = {}; 
-
-        window.initTroyCarousel = function(uid, total) {
-            if (troyCarousels[uid]) return; 
-            troyCarousels[uid] = { current: 0, total: total };
-            const track = document.getElementById(`tc-track-${uid}`);
-            if (!track) return;
-            
-            let startX = 0, currentX = 0, isDragging = false;
-
-            const startDrag = (x) => { startX = x; isDragging = true; track.style.transition = 'none'; wakeUpCarouselControls(uid); };
-            const moveDrag = (x) => {
-                if(!isDragging) return;
-                currentX = x;
-                let diff = currentX - startX;
-                let baseTransform = -(troyCarousels[uid].current * 100);
-                let diffPct = (diff / track.clientWidth) * 100;
-                track.style.transform = `translateX(calc(${baseTransform}% + ${diffPct}%))`;
-            };
-            const endDrag = () => {
-                if(!isDragging) return;
-                isDragging = false;
-                track.style.transition = 'transform 0.3s ease-in-out';
-                let diff = currentX - startX;
-                if (diff < -40) window.moveTroyCarousel(uid, 1);
-                else if (diff > 40) window.moveTroyCarousel(uid, -1);
-                else window.updateTroyCarouselUI(uid); 
-            };
-
-            track.addEventListener('touchstart', e => startDrag(e.touches[0].clientX), {passive: true});
-            track.addEventListener('touchmove', e => moveDrag(e.touches[0].clientX), {passive: true});
-            track.addEventListener('touchend', endDrag);
-
-            track.addEventListener('mousedown', e => startDrag(e.clientX));
-            window.addEventListener('mousemove', e => { if(isDragging) moveDrag(e.clientX); });
-            window.addEventListener('mouseup', e => { if(isDragging) endDrag(); });
-
-            wakeUpCarouselControls(uid);
-        };
-
-        window.wakeUpCarouselControls = function(uid) {
-            const controls = document.getElementById(`tc-controls-${uid}`);
-            const container = document.getElementById(`troy-carousel-${uid}`);
-            if (!controls || !container) return;
-
-            controls.classList.add('show-controls');
-            container.classList.remove('hide-cursor');
-
-            if (carouselHideTimers[uid]) clearTimeout(carouselHideTimers[uid]);
-
-            carouselHideTimers[uid] = setTimeout(function() {
-                controls.classList.remove('show-controls');
-                container.classList.add('hide-cursor');
-            }, 3000);
-        };
-
-        window.toggleCarouselFullscreen = function(uid) {
-            const container = document.getElementById(`troy-carousel-${uid}`);
-            if (!container) return;
-            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-                if (container.requestFullscreen) container.requestFullscreen();
-                else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
-            } else {
-                if (document.exitFullscreen) document.exitFullscreen();
-                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-            }
-        };
-
-        window.moveTroyCarousel = function(uid, dir) {
-            let state = troyCarousels[uid];
-            if(!state) return;
-            state.current += dir;
-            if (state.current >= state.total) state.current = 0;
-            else if (state.current < 0) state.current = state.total - 1;
-            window.updateTroyCarouselUI(uid);
-        };
-
-        window.jumpTroyCarousel = function(uid, index) {
-            let state = troyCarousels[uid];
-            if(!state) return;
-            state.current = index;
-            window.updateTroyCarouselUI(uid);
-        };
-
-        window.updateTroyCarouselUI = function(uid) {
-            let state = troyCarousels[uid];
-            const track = document.getElementById(`tc-track-${uid}`);
-            if(track) track.style.transform = `translateX(-${state.current * 100}%)`;
-            const dots = document.querySelectorAll(`#tc-ind-${uid} .tc-dot`);
-            dots.forEach((dot, idx) => dot.classList.toggle('active', idx === state.current));
-        };
 
         function isMobileDevice() { return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent); }
 
@@ -704,137 +542,66 @@
             }
         }
 
-        // ==========================================
-        // 浮動控制列智能喚醒引擎 & 完美全螢幕相容
-        // ==========================================
         window.wakeUpRecorderControls = function(type) {
-            const overlay = document.getElementById(`${type}-overlay-controls`);
-            const container = document.getElementById(`${type}-recorder-wrapper`);
+            const overlay = document.getElementById(`${type}-overlay-controls`); const container = document.getElementById(`${type}-recorder-wrapper`);
             if (!overlay || overlay.style.display === 'none') return;
-            
-            overlay.classList.add('show');
-            if(container) container.style.cursor = 'pointer';
-
+            overlay.classList.add('show'); if(container) container.style.cursor = 'pointer';
             if (recorderHideTimers[type]) clearTimeout(recorderHideTimers[type]);
-            
-            recorderHideTimers[type] = setTimeout(() => {
-                overlay.classList.remove('show');
-                if(container) container.style.cursor = 'none';
-            }, 3000);
+            recorderHideTimers[type] = setTimeout(() => { overlay.classList.remove('show'); if(container) container.style.cursor = 'none'; }, 3000);
         };
 
         window.toggleRecorderFullscreen = function(type, event) {
-            if(event) event.stopPropagation();
-            const container = document.getElementById(`${type}-recorder-wrapper`);
-            if (!container) return;
-
-            if (container.classList.contains('pseudo-fullscreen')) {
-                container.classList.remove('pseudo-fullscreen');
-                wakeUpRecorderControls(type);
-                return;
-            }
-
+            if(event) event.stopPropagation(); const container = document.getElementById(`${type}-recorder-wrapper`); if (!container) return;
+            if (container.classList.contains('pseudo-fullscreen')) { container.classList.remove('pseudo-fullscreen'); wakeUpRecorderControls(type); return; }
             if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-                if (container.requestFullscreen) {
-                    container.requestFullscreen().catch(err => {
-                        container.classList.add('pseudo-fullscreen'); 
-                    });
-                }
-                else if (container.webkitRequestFullscreen) {
-                    container.webkitRequestFullscreen();
-                } else {
-                    container.classList.add('pseudo-fullscreen');
-                }
-            } else {
-                if (document.exitFullscreen) document.exitFullscreen();
-                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-            }
+                if (container.requestFullscreen) { container.requestFullscreen().catch(err => { container.classList.add('pseudo-fullscreen'); }); }
+                else if (container.webkitRequestFullscreen) { container.webkitRequestFullscreen(); } else { container.classList.add('pseudo-fullscreen'); }
+            } else { if (document.exitFullscreen) document.exitFullscreen(); else if (document.webkitExitFullscreen) document.webkitExitFullscreen(); }
             wakeUpRecorderControls(type);
         };
 
         function updateFullscreenBtnVisibility(type) {
             const fsBtn = document.getElementById(`${type}-btn-glass-fullscreen`);
-            if (fsBtn) {
-                if (activeVideoSource === 'screen') {
-                    fsBtn.style.display = 'none';
-                } else {
-                    fsBtn.style.display = 'flex';
-                }
-            }
+            if (fsBtn) { fsBtn.style.display = (activeVideoSource === 'screen') ? 'none' : 'flex'; }
         }
 
-        // ==========================================
-        // 防誤觸離開機制
-        // ==========================================
         window.addEventListener('beforeunload', function (e) {
             const hasPostText = document.getElementById('post-title')?.value || document.getElementById('post-desc')?.value;
             const hasReplyText = document.getElementById('reply-desc')?.value;
             const hasPostMedia = currentLocalBlob['post'] || pendingImages['post'].length > 0;
             const hasReplyMedia = currentLocalBlob['reply'] || pendingImages['reply'].length > 0;
-
-            if (hasPostText || hasReplyText || hasPostMedia || hasReplyMedia) {
-                e.preventDefault();
-                e.returnValue = ''; 
-            }
+            if (hasPostText || hasReplyText || hasPostMedia || hasReplyMedia) { e.preventDefault(); e.returnValue = ''; }
         });
 
-        // ==========================================
-        // 文字草稿自動儲存機制
-        // ==========================================
         function setupAutoSave() {
             const fields = ['post-title', 'post-desc', 'reply-desc'];
-            
             fields.forEach(id => {
                 const el = document.getElementById(id);
-                if (el) {
-                    el.addEventListener('input', (e) => {
-                        localStorage.setItem(`draft_${id}`, e.target.value);
-                    });
-                }
+                if (el) { el.addEventListener('input', (e) => { localStorage.setItem(`draft_${id}`, e.target.value); }); }
             });
-
             fields.forEach(id => {
-                const el = document.getElementById(id);
-                const savedValue = localStorage.getItem(`draft_${id}`);
-                if (el && savedValue) {
-                    el.value = savedValue;
-                }
+                const el = document.getElementById(id); const savedValue = localStorage.getItem(`draft_${id}`);
+                if (el && savedValue) { el.value = savedValue; }
             });
         }
 
         function clearDraft(type) {
-            if (type === 'post') {
-                localStorage.removeItem('draft_post-title');
-                localStorage.removeItem('draft_post-desc');
-            } else if (type === 'reply') {
-                localStorage.removeItem('draft_reply-desc');
-            }
+            if (type === 'post') { localStorage.removeItem('draft_post-title'); localStorage.removeItem('draft_post-desc'); } 
+            else if (type === 'reply') { localStorage.removeItem('draft_reply-desc'); }
         }
 
-        // ==========================================
-        // 記住登入狀態機制
-        // ==========================================
         function checkLogin() {
-            const savedEmail = localStorage.getItem('user_email');
-            const savedTime = localStorage.getItem('login_timestamp');
-            
+            const savedEmail = localStorage.getItem('user_email'); const savedTime = localStorage.getItem('login_timestamp');
             if (savedEmail && savedTime) {
-                const now = Date.now();
-                const sixHours = 6 * 60 * 60 * 1000; 
-                
+                const now = Date.now(); const sixHours = 6 * 60 * 60 * 1000; 
                 if (now - parseInt(savedTime) < sixHours) {
                     currentUserEmail = savedEmail;
                     document.getElementById('login-status').innerText = `目前狀態：已登入 (${savedEmail})`;
                     document.getElementById('login-status').style.color = 'var(--accent-green)';
-                    document.getElementById('step-1').style.display = 'none';
-                    document.getElementById('step-2').style.display = 'none';
-                    document.getElementById('btn-logout').style.display = 'block';
-                    document.getElementById('publish-section').style.display = 'block';
+                    document.getElementById('step-1').style.display = 'none'; document.getElementById('step-2').style.display = 'none';
+                    document.getElementById('btn-logout').style.display = 'block'; document.getElementById('publish-section').style.display = 'block';
                     return true;
-                } else {
-                    localStorage.removeItem('user_email');
-                    localStorage.removeItem('login_timestamp');
-                }
+                } else { localStorage.removeItem('user_email'); localStorage.removeItem('login_timestamp'); }
             }
             return false;
         }
@@ -844,78 +611,51 @@
             document.getElementById(`${type}-mode-image-btn`).classList.toggle('active', mode === 'image');
             document.getElementById(`${type}-recorder-container`).style.display = mode === 'video' ? 'block' : 'none';
             document.getElementById(`${type}-image-container`).style.display = mode === 'image' ? 'block' : 'none';
-            
             const textFields = document.getElementById(`${type}-text-fields`);
-            if (textFields) {
-                if (mode === 'image') textFields.classList.remove('hidden-fields');
-                else textFields.classList.add('hidden-fields');
-            }
+            if (textFields) { if (mode === 'image') textFields.classList.remove('hidden-fields'); else textFields.classList.add('hidden-fields'); }
             document.getElementById(`${type}-media-type`).value = mode;
         }
 
-        // ==========================================
-        // 圖片處理
-        // ==========================================
         function handleImageSelected(type, inputEl) {
-            const files = Array.from(inputEl.files);
-            if (files.length === 0) return;
+            const files = Array.from(inputEl.files); if (files.length === 0) return;
             files.forEach(file => { pendingImages[type].push(file); });
-            inputEl.value = ''; 
-            renderImageCarousel(type);
+            inputEl.value = ''; renderImageCarousel(type);
         }
 
         function removeImage(type, index) { pendingImages[type].splice(index, 1); renderImageCarousel(type); }
 
         function renderImageCarousel(type) {
-            const container = document.getElementById(`${type}-image-carousel`);
-            container.innerHTML = '';
+            const container = document.getElementById(`${type}-image-carousel`); container.innerHTML = '';
             if (pendingImages[type].length === 0) { container.style.display = 'none'; return; }
             container.style.display = 'flex';
-            
             pendingImages[type].forEach((file, index) => {
-                const url = URL.createObjectURL(file);
-                const wrapper = document.createElement('div');
-                wrapper.className = 'img-preview-box';
+                const url = URL.createObjectURL(file); const wrapper = document.createElement('div'); wrapper.className = 'img-preview-box';
                 wrapper.innerHTML = `<img src="${url}"><button class="btn-delete-img" onclick="removeImage('${type}', ${index})">✕</button>`;
                 container.appendChild(wrapper);
             });
         }
 
         async function uploadPendingImages(type) {
-            const files = pendingImages[type];
-            if (files.length === 0) return { urls: '', ids: '' };
+            const files = pendingImages[type]; if (files.length === 0) return { urls: '', ids: '' };
             let uploadedUrls = []; let uploadedIds = [];
-
             for (let i = 0; i < files.length; i++) {
                 const file = files[i]; const ext = file.name.split('.').pop() || 'jpg'; const filename = `Temp_${Date.now()}_${i}.${ext}`;
                 showRecorderMsg(type, `正在直傳雲端圖片 (${i+1}/${files.length})...`, false, true, true);
-                
                 try {
                     const initRes = await fetch(GAS_LIVE_URL, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'init_upload', filename: filename, mediaType: 'image' }) });
                     const initData = await initRes.json();
                     if (initData.status !== 'success') throw new Error(initData.message);
-                    const uploadUrl = initData.uploadUrl;
-                    
-                    const response = await fetch(uploadUrl, {
-                        method: 'PUT',
-                        headers: { 'Content-Range': `bytes 0-${file.size - 1}/${file.size}` },
-                        body: file
-                    });
-                    
+                    const response = await fetch(initData.uploadUrl, { method: 'PUT', headers: { 'Content-Range': `bytes 0-${file.size - 1}/${file.size}` }, body: file });
                     if (response.status === 200 || response.status === 201) {
-                        const data = await response.json();
-                        uploadedIds.push(data.id); 
-                        uploadedUrls.push(`https://drive.google.com/file/d/${data.id}/view`);
-                    } else {
-                        throw new Error(`HTTP Error ${response.status}`);
-                    }
+                        const data = await response.json(); uploadedIds.push(data.id); uploadedUrls.push(`https://drive.google.com/file/d/${data.id}/view`);
+                    } else { throw new Error(`HTTP Error ${response.status}`); }
                 } catch(err) { throw new Error(`第 ${i+1} 張圖片上傳失敗: ` + err.message); }
             }
             return { urls: uploadedUrls.join(','), ids: uploadedIds.join(',') };
         }
 
         // ==========================================
-        // 核心優化：GAS 隱形轉發串流引擎
+        // 核心優化：GAS 隱形轉發串流引擎 (每個 Fragment 獨立打包，避免 Offset 錯誤)
         // ==========================================
         async function processUploadQueue(type) {
             const state = streamStates[type];
@@ -924,42 +664,31 @@
 
             const chunkObj = state.queue.shift();
             const { blob, isFinal, isSplitting } = chunkObj;
-            const start = state.offset;
-
+            
             try {
                 if (blob.size === 0 && isFinal) {
-                    if (!isSplitting) {
-                        state.isFinalized = true;
-                        showRecorderMsg(type, "✅ 雲端備份已 100% 完成！請點擊下方確認發布。", false, true);
-                    }
-                    state.isUploading = false;
-                    processUploadQueue(type);
-                    return;
+                    if (!isSplitting) { state.isFinalized = true; showRecorderMsg(type, "✅ 雲端備份已 100% 完成！請點擊下方確認發布。", false, true); }
+                    state.isUploading = false; processUploadQueue(type); return;
                 }
 
                 const chunkBase64 = await blobToBase64(blob);
+                let progressText = `雲端同步中... (已上傳 ${(state.offset / 1024 / 1024).toFixed(1)} MB)`;
+                
+                // 動態計算當前 part 的總大小
+                const payloadTotalSize = isFinal ? (state.offset + blob.size) : '*';
+                if (isFinal) progressText = `正在雲端封裝防護影片...`;
 
-                let progressText = `雲端同步中... (已上傳 ${(start / 1024 / 1024).toFixed(1)} MB)`;
-                if (isFinal || currentRecordType !== type) {
-                    const totalBytesToUpload = state.offset + state.queue.reduce((acc, curr) => acc + curr.blob.size, 0) + blob.size;
-                    const percent = Math.round(((start + blob.size) / totalBytesToUpload) * 100);
-                    progressText = `雲端備份進度：${percent}%`;
-                }
-                showRecorderMsg(type, `<span class="spinner"></span> ${progressText} (請勿關閉網頁)`, false, true);
-
-                const payloadTotalSize = isFinal ? (start + blob.size) : '*';
+                showRecorderMsg(type, `<span class="spinner"></span> ${progressText}`, false, true);
 
                 const response = await fetch(GAS_LIVE_URL, {
-                    method: 'POST',
-                    redirect: 'follow',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({
                         action: 'upload_chunk',
                         isDualTrack: true,
                         uploadUrlDrive: state.driveUrl,
                         uploadUrlGemini: state.geminiUrl,
                         chunkBase64: chunkBase64,
-                        start: start,
+                        start: state.offset,
                         totalSize: payloadTotalSize
                     })
                 });
@@ -970,32 +699,17 @@
                     state.offset += blob.size;
 
                     if (isFinal && data.status === 'success') {
-                        state.completedParts.push({
-                            driveId: data.driveId,
-                            geminiUri: data.geminiUri,
-                            geminiName: data.geminiName
-                        });
-
-                        if (!isSplitting) {
-                            state.isFinalized = true;
-                            showRecorderMsg(type, "✅ 雲端備份已 100% 完成！請點擊下方確認發布。", false, true);
-                        } else {
-                            showRecorderMsg(type, `✅ Part ${state.partIndex - 1} 已安全存入雲端！`, false, true);
-                        }
+                        state.completedParts.push({ driveId: data.driveId, geminiUri: data.geminiUri, geminiName: data.geminiName });
+                        if (!isSplitting) { state.isFinalized = true; showRecorderMsg(type, "✅ 雲端備份已 100% 完成！請點擊下方確認發布。", false, true); } 
+                        else { showRecorderMsg(type, `✅ 影片防護機制：Part ${state.partIndex - 1} 已安全存入專屬資料夾！`, false, true); }
                     }
-                } else {
-                    throw new Error(data.message || "轉發失敗");
-                }
+                } else { throw new Error(data.message || "轉發失敗"); }
 
             } catch (e) {
                 console.error("Upload error caught:", e);
                 showRecorderMsg(type, `網路波動 (${e.message})，系統將於 3 秒後自動重試...`, true, true);
                 state.queue.unshift(chunkObj);
-                
-                setTimeout(() => { 
-                    state.isUploading = false; 
-                    processUploadQueue(type); 
-                }, 3000);
+                setTimeout(() => { state.isUploading = false; processUploadQueue(type); }, 3000);
                 return;
             }
 
@@ -1003,9 +717,6 @@
             processUploadQueue(type);
         }
 
-        // ==========================================
-        // 無縫錄影與原生預覽引擎
-        // ==========================================
         function killMediaTracks() {
             if (drawLoopId) { clearTimeout(drawLoopId); drawLoopId = null; } 
             if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
@@ -1043,31 +754,19 @@
                     cameraHiddenVideo.srcObject = new MediaStream([newStream.getVideoTracks()[0]]);
                     showRecorderMsg(type, `已切換至「${currentFacingMode === 'user' ? '前置' : '後置'}」鏡頭`, false, false);
                     if (mediaRecorder && mediaRecorder.state === 'recording' && !isPaused) setTimeout(() => showRecorderMsg(type, "正在錄製中...", false, true), 2000);
-                } catch (err) {
-                    showRecorderMsg(type, "切換鏡頭失敗：" + err.message, true, true);
-                    currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user'; 
-                }
+                } catch (err) { showRecorderMsg(type, "切換鏡頭失敗：" + err.message, true, true); currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user'; }
             } else {
                 activeVideoSource = (activeVideoSource === 'screen') ? 'camera' : 'screen';
                 updateFullscreenBtnVisibility(type); 
-                
                 showRecorderMsg(type, `已無縫切換至「${activeVideoSource === 'screen' ? '螢幕' : '鏡頭'}」畫面`, false, false);
                 if (mediaRecorder && mediaRecorder.state === 'recording' && !isPaused) setTimeout(() => showRecorderMsg(type, "正在錄製中...", false, true), 2000);
             }
         }
 
         function togglePauseRecording(type) {
-            if (!mediaRecorder) return;
-            const pauseBtn = document.getElementById(`${type}-btn-glass-pause`);
-            if (mediaRecorder.state === 'recording') {
-                mediaRecorder.pause(); isPaused = true;
-                pauseBtn.innerHTML = playSvg;
-                showRecorderMsg(type, "錄影已暫停... (準備好再繼續)", false, true);
-            } else if (mediaRecorder.state === 'paused') {
-                mediaRecorder.resume(); isPaused = false;
-                pauseBtn.innerHTML = pauseSvg;
-                showRecorderMsg(type, "正在錄製中...", false, true);
-            }
+            if (!mediaRecorder) return; const pauseBtn = document.getElementById(`${type}-btn-glass-pause`);
+            if (mediaRecorder.state === 'recording') { mediaRecorder.pause(); isPaused = true; pauseBtn.innerHTML = playSvg; showRecorderMsg(type, "錄影已暫停... (準備好再繼續)", false, true); } 
+            else if (mediaRecorder.state === 'paused') { mediaRecorder.resume(); isPaused = false; pauseBtn.innerHTML = pauseSvg; showRecorderMsg(type, "正在錄製中...", false, true); }
             wakeUpRecorderControls(type); 
         }
 
@@ -1082,140 +781,87 @@
                 const isMobile = isMobileDevice();
                 if (isMobile) {
                     const isLandscape = window.innerWidth > window.innerHeight;
-                    internalCanvas.width = isLandscape ? 1920 : 1080;
-                    internalCanvas.height = isLandscape ? 1080 : 1920;
-                } else {
-                    internalCanvas.width = 1920;
-                    internalCanvas.height = 1080;
-                }
+                    internalCanvas.width = isLandscape ? 1920 : 1080; internalCanvas.height = isLandscape ? 1080 : 1920;
+                } else { internalCanvas.width = 1920; internalCanvas.height = 1080; }
                 
                 internalCanvas.style.position = 'fixed'; internalCanvas.style.top = '-9999px'; internalCanvas.style.opacity = '0'; document.body.appendChild(internalCanvas);
-                internalCtx = internalCanvas.getContext('2d', { alpha: false });
-                internalCtx.imageSmoothingEnabled = true; internalCtx.imageSmoothingQuality = 'high';
+                internalCtx = internalCanvas.getContext('2d', { alpha: false }); internalCtx.imageSmoothingEnabled = true; internalCtx.imageSmoothingQuality = 'high';
                 cameraHiddenVideo = document.createElement('video'); cameraHiddenVideo.muted = true; cameraHiddenVideo.autoplay = true; cameraHiddenVideo.playsInline = true;
                 lastDrawTime = 0;
 
                 if (isMobile) {
-                    currentFacingMode = 'user';
-                    activeVideoSource = 'camera';
-                    try { 
-                        micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: currentFacingMode, width: { ideal: 1920 }, height: { ideal: 1080 } } });
-                    } catch(e) { showRecorderMsg(type, "相機被封鎖", true, true); return; }
+                    currentFacingMode = 'user'; activeVideoSource = 'camera';
+                    try { micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: currentFacingMode, width: { ideal: 1920 }, height: { ideal: 1080 } } }); } catch(e) { showRecorderMsg(type, "相機被封鎖", true, true); return; }
                     if (micStream.getAudioTracks().length > 0) audioContext.createMediaStreamSource(micStream).connect(dest);
                     cameraHiddenVideo.srcObject = new MediaStream([micStream.getVideoTracks()[0]]);
 
                     function drawMobileFrame() {
                         if (!internalCtx) return; drawLoopId = setTimeout(drawMobileFrame, fpsInterval);
-                        
                         const currentIsLandscape = window.innerWidth > window.innerHeight;
-                        const targetW = currentIsLandscape ? 1920 : 1080;
-                        const targetH = currentIsLandscape ? 1080 : 1920;
-                        if (internalCanvas.width !== targetW) {
-                            internalCanvas.width = targetW;
-                            internalCanvas.height = targetH;
-                        }
+                        const targetW = currentIsLandscape ? 1920 : 1080; const targetH = currentIsLandscape ? 1080 : 1920;
+                        if (internalCanvas.width !== targetW) { internalCanvas.width = targetW; internalCanvas.height = targetH; }
 
                         const wrapper = document.getElementById(`${type}-recorder-wrapper`);
-                        if (wrapper) {
-                            const currentAspect = currentIsLandscape ? '16/9' : '9/16';
-                            if (wrapper.style.aspectRatio !== currentAspect) wrapper.style.aspectRatio = currentAspect;
-                        }
+                        if (wrapper) { const currentAspect = currentIsLandscape ? '16/9' : '9/16'; if (wrapper.style.aspectRatio !== currentAspect) wrapper.style.aspectRatio = currentAspect; }
 
-                        internalCtx.fillStyle = '#000'; 
-                        internalCtx.fillRect(0, 0, internalCanvas.width, internalCanvas.height);
+                        internalCtx.fillStyle = '#000'; internalCtx.fillRect(0, 0, internalCanvas.width, internalCanvas.height);
                         
                         if (cameraHiddenVideo.readyState >= 2 && cameraHiddenVideo.videoWidth > 0) {
-                            const vRatio = cameraHiddenVideo.videoWidth / cameraHiddenVideo.videoHeight; 
-                            const cRatio = internalCanvas.width / internalCanvas.height;
+                            const vRatio = cameraHiddenVideo.videoWidth / cameraHiddenVideo.videoHeight; const cRatio = internalCanvas.width / internalCanvas.height;
                             let drawWidth, drawHeight, x, y;
-                            
-                            if (vRatio > cRatio) { 
-                                drawHeight = internalCanvas.height; 
-                                drawWidth = internalCanvas.height * vRatio; 
-                                x = (internalCanvas.width - drawWidth) / 2; 
-                                y = 0;
-                            } else { 
-                                drawWidth = internalCanvas.width; 
-                                drawHeight = internalCanvas.width / vRatio; 
-                                x = 0; 
-                                y = (internalCanvas.height - drawHeight) / 2; 
-                            }
+                            if (vRatio > cRatio) { drawHeight = internalCanvas.height; drawWidth = internalCanvas.height * vRatio; x = (internalCanvas.width - drawWidth) / 2; y = 0; } 
+                            else { drawWidth = internalCanvas.width; drawHeight = internalCanvas.width / vRatio; x = 0; y = (internalCanvas.height - drawHeight) / 2; }
                             
                             internalCtx.save();
-                            if (currentFacingMode === 'user') { 
-                                internalCtx.translate(x + drawWidth / 2, y + drawHeight / 2); 
-                                internalCtx.scale(-1, 1); 
-                                internalCtx.drawImage(cameraHiddenVideo, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
-                            } else { 
-                                internalCtx.drawImage(cameraHiddenVideo, x, y, drawWidth, drawHeight); 
-                            }
+                            if (currentFacingMode === 'user') { internalCtx.translate(x + drawWidth / 2, y + drawHeight / 2); internalCtx.scale(-1, 1); internalCtx.drawImage(cameraHiddenVideo, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight); } 
+                            else { internalCtx.drawImage(cameraHiddenVideo, x, y, drawWidth, drawHeight); }
                             internalCtx.restore();
                         }
                     }
                     drawMobileFrame(); showRecorderMsg(type, "鏡頭已就緒！點擊開始錄製。", false, true);
                 } else {
-                    try { micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: useCamera ? { width: { ideal: 1920 }, height: { ideal: 1080 } } : false });
-                    } catch(e) { showRecorderMsg(type, "麥克風/相機被封鎖", true, true); return; }
-                    
-                    try { screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { displaySurface: "monitor", width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: { systemAudio: "include" }, preferCurrentTab: false });
-                    } catch(e) { killMediaTracks(); return; }
+                    try { micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: useCamera ? { width: { ideal: 1920 }, height: { ideal: 1080 } } : false }); } catch(e) { showRecorderMsg(type, "麥克風/相機被封鎖", true, true); return; }
+                    try { screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { displaySurface: "monitor", width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: { systemAudio: "include" }, preferCurrentTab: false }); } catch(e) { killMediaTracks(); return; }
                     
                     if (micStream.getAudioTracks().length > 0) audioContext.createMediaStreamSource(micStream).connect(dest);
                     if (screenStream.getAudioTracks().length > 0) audioContext.createMediaStreamSource(screenStream).connect(dest);
 
-                    activeVideoSource = 'screen';
-                    screenHiddenVideo = document.createElement('video'); screenHiddenVideo.muted = true; screenHiddenVideo.autoplay = true; screenHiddenVideo.playsInline = true;
-                    screenHiddenVideo.srcObject = screenStream;
-                    if (useCamera && micStream.getVideoTracks().length > 0) cameraHiddenVideo.srcObject = new MediaStream([micStream.getVideoTracks()[0]]);
-                    else cameraHiddenVideo = null;
+                    activeVideoSource = 'screen'; screenHiddenVideo = document.createElement('video'); screenHiddenVideo.muted = true; screenHiddenVideo.autoplay = true; screenHiddenVideo.playsInline = true; screenHiddenVideo.srcObject = screenStream;
+                    if (useCamera && micStream.getVideoTracks().length > 0) cameraHiddenVideo.srcObject = new MediaStream([micStream.getVideoTracks()[0]]); else cameraHiddenVideo = null;
 
                     function drawPcFrame() {
                         if (!internalCtx) return; drawLoopId = setTimeout(drawPcFrame, fpsInterval);
                         internalCtx.fillStyle = '#111'; internalCtx.fillRect(0, 0, internalCanvas.width, internalCanvas.height);
                         let sourceVid = (activeVideoSource === 'screen') ? screenHiddenVideo : cameraHiddenVideo;
                         
-                        if (!sourceVid && activeVideoSource === 'camera') {
-                            internalCtx.fillStyle = '#FFF'; internalCtx.font = '30px Arial'; internalCtx.textAlign = 'center'; internalCtx.fillText('未開啟或未偵測到鏡頭', internalCanvas.width/2, internalCanvas.height/2);
-                        } else if (sourceVid && sourceVid.readyState >= 2 && sourceVid.videoWidth > 0) {
+                        if (!sourceVid && activeVideoSource === 'camera') { internalCtx.fillStyle = '#FFF'; internalCtx.font = '30px Arial'; internalCtx.textAlign = 'center'; internalCtx.fillText('未開啟或未偵測到鏡頭', internalCanvas.width/2, internalCanvas.height/2); } 
+                        else if (sourceVid && sourceVid.readyState >= 2 && sourceVid.videoWidth > 0) {
                             const vRatio = sourceVid.videoWidth / sourceVid.videoHeight; const cRatio = internalCanvas.width / internalCanvas.height;
                             let drawWidth, drawHeight, x, y;
-                            if (vRatio > cRatio) { drawWidth = internalCanvas.width; drawHeight = internalCanvas.width / vRatio; x = 0; y = (internalCanvas.height - drawHeight) / 2;
-                            } else { drawHeight = internalCanvas.height; drawWidth = internalCanvas.height * vRatio; x = (internalCanvas.width - drawWidth) / 2; y = 0; }
+                            if (vRatio > cRatio) { drawWidth = internalCanvas.width; drawHeight = internalCanvas.width / vRatio; x = 0; y = (internalCanvas.height - drawHeight) / 2; } 
+                            else { drawHeight = internalCanvas.height; drawWidth = internalCanvas.height * vRatio; x = (internalCanvas.width - drawWidth) / 2; y = 0; }
                             internalCtx.save();
-                            if (activeVideoSource === 'camera') { internalCtx.translate(x + drawWidth / 2, y + drawHeight / 2); internalCtx.scale(-1, 1); internalCtx.drawImage(sourceVid, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
-                            } else { internalCtx.drawImage(sourceVid, x, y, drawWidth, drawHeight); }
+                            if (activeVideoSource === 'camera') { internalCtx.translate(x + drawWidth / 2, y + drawHeight / 2); internalCtx.scale(-1, 1); internalCtx.drawImage(sourceVid, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight); } 
+                            else { internalCtx.drawImage(sourceVid, x, y, drawWidth, drawHeight); }
                             internalCtx.restore();
                         }
                     }
-                    drawPcFrame();
-                    screenStream.getVideoTracks()[0].onended = () => { if(mediaRecorder && mediaRecorder.state === "recording") stopRecording(type); else cancelRecording(type); };
+                    drawPcFrame(); screenStream.getVideoTracks()[0].onended = () => { if(mediaRecorder && mediaRecorder.state === "recording") stopRecording(type); else cancelRecording(type); };
                     showRecorderMsg(type, "視窗已連接！點擊開始錄製。", false, true);
                 }
 
                 let tracks = [...internalCanvas.captureStream(30).getVideoTracks(), ...dest.stream.getAudioTracks()]; combinedStream = new MediaStream(tracks);
                 const previewVideo = document.getElementById(`${type}-preview-video`); 
-                previewVideo.srcObject = combinedStream; 
-                previewVideo.muted = true; 
-                previewVideo.style.pointerEvents = 'none'; 
-                
-                if (isMobile) {
-                    previewVideo.style.objectFit = 'cover';
-                } else {
-                    previewVideo.style.objectFit = 'contain';
-                }
+                previewVideo.srcObject = combinedStream; previewVideo.muted = true; previewVideo.style.pointerEvents = 'none'; 
+                if (isMobile) { previewVideo.style.objectFit = 'cover'; } else { previewVideo.style.objectFit = 'contain'; }
 
-                document.getElementById(`${type}-btn-setup-record`).style.display = 'none'; 
-                document.getElementById(`${type}-recorder-wrapper`).style.display = 'block';
-                document.getElementById(`${type}-overlay-controls`).style.display = 'flex';
-                
-                updateFullscreenBtnVisibility(type);
-                wakeUpRecorderControls(type);
-                
+                document.getElementById(`${type}-btn-setup-record`).style.display = 'none'; document.getElementById(`${type}-recorder-wrapper`).style.display = 'block'; document.getElementById(`${type}-overlay-controls`).style.display = 'flex';
+                updateFullscreenBtnVisibility(type); wakeUpRecorderControls(type);
             } catch (err) { showRecorderMsg(type, "發生錯誤：" + err.message, true, true); killMediaTracks(); }
         }
 
         // ==========================================
-        // 每 3 分鐘自動切割功能實作
+        // 每 3 分鐘自動切割與即刻建檔接力
         // ==========================================
         async function triggerSplit(type) {
             const state = streamStates[type];
@@ -1223,19 +869,18 @@
 
             showRecorderMsg(type, `[防護機制] 錄製達 ${state.partIndex * 3} 分鐘，正在雲端封裝 Part ${state.partIndex}...`, false, true);
             state.isSplitting = true;
-            mediaRecorder.stop(); // 觸發 onstop 將當前緩衝推入上傳佇列並封裝
+            mediaRecorder.stop(); 
 
             setTimeout(async () => {
                 state.partIndex++;
-                const emailInput = document.getElementById('email') ? document.getElementById('email').value.trim() : currentUserEmail;
-                const prefix = emailInput ? emailInput.split('@')[0] : 'User';
-                const extension = 'mp4';
-                const filename = `${prefix}_Clip_${Date.now()}_Part${state.partIndex}.${extension}`;
-
                 try {
                     const initRes = await fetch(GAS_LIVE_URL, {
                         method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({ action: 'init_upload', filename: filename, mediaType: 'video' })
+                        body: JSON.stringify({ 
+                            action: 'init_upload', mediaType: 'video', 
+                            email: currentUserEmail, courseId: state.sessionCourseId, 
+                            role: state.role, partIndex: state.partIndex, folderId: state.folderId 
+                        })
                     });
                     const initData = await initRes.json();
                     if (initData.status !== 'success') throw new Error(initData.message);
@@ -1243,67 +888,54 @@
                     state.driveUrl = initData.uploadUrlDrive;
                     state.geminiUrl = initData.uploadUrlGemini;
                     state.buffer = new Blob([], { type: mediaRecorder.mimeType || 'video/mp4' });
-                    state.offset = 0;
-                    state.isFinalized = false;
-
-                    recordedChunks = [];
-                    mediaRecorder.start(1000);
-                    state.isSplitting = false;
+                    state.offset = 0; state.isFinalized = false;
+                    
+                    recordedChunks = []; mediaRecorder.start(1000); state.isSplitting = false;
                     showRecorderMsg(type, `[自動接力] Part ${state.partIndex} 繼續錄製中...`, false, true);
-                } catch(e) {
-                    showRecorderMsg(type, "自動切割失敗: " + e.message, true, true);
-                }
-            }, 800); // 確保 stop 完成後再啟動
+                } catch(e) { showRecorderMsg(type, "自動切割失敗: " + e.message, true, true); }
+            }, 800); 
         }
 
         async function startRecording(type) {
-            showRecorderMsg(type, "正在初始化雲端直傳通道...", false, true);
+            showRecorderMsg(type, "正在準備專屬雲端資料夾...", false, true);
             const emailInput = document.getElementById('email') ? document.getElementById('email').value.trim() : currentUserEmail;
-            const prefix = emailInput ? emailInput.split('@')[0] : 'User';
+            const isAdmin = emailInput.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
+            // 生成當前錄影專屬資訊
+            let sessionCourseId = type === 'post' ? generateAutoId() : currentPost.courseId;
+            let role = type === 'post' ? (isAdmin ? '教練首發' : '學員首發') : (isAdmin ? '陪跑教練' : '學員追問');
             let mimeTypeToUse = 'video/mp4';
-            let extension = 'mp4';
 
-            if (MediaRecorder.isTypeSupported('video/mp4')) {
-                mimeTypeToUse = 'video/mp4';
-            } else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264,opus') || MediaRecorder.isTypeSupported('video/webm;codecs=h264')) {
-                mimeTypeToUse = 'video/webm;codecs=h264,opus';
-            } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) {
-                mimeTypeToUse = 'video/webm;codecs=vp8,opus';
-            }
-
-            const filename = `${prefix}_Clip_${Date.now()}_Part1.${extension}`;
+            if (MediaRecorder.isTypeSupported('video/mp4')) mimeTypeToUse = 'video/mp4';
+            else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264,opus') || MediaRecorder.isTypeSupported('video/webm;codecs=h264')) mimeTypeToUse = 'video/webm;codecs=h264,opus';
+            else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) mimeTypeToUse = 'video/webm;codecs=vp8,opus';
 
             try {
+                // 發送請求，讓後端立刻建立資料夾與初始化 Part1
                 const initRes = await fetch(GAS_LIVE_URL, {
                     method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'init_upload', filename: filename, mediaType: 'video' }) 
+                    body: JSON.stringify({ 
+                        action: 'init_upload', mediaType: 'video', 
+                        email: emailInput, courseId: sessionCourseId, 
+                        role: role, partIndex: 1, folderId: '' 
+                    }) 
                 });
                 const initData = await initRes.json();
                 if (initData.status !== 'success') throw new Error(initData.message);
 
-                if (streamStates[type] && streamStates[type].splitTimer) {
-                    clearInterval(streamStates[type].splitTimer);
-                }
+                if (streamStates[type] && streamStates[type].splitTimer) clearInterval(streamStates[type].splitTimer);
 
                 streamStates[type] = {
                     driveUrl: initData.uploadUrlDrive, geminiUrl: initData.uploadUrlGemini,
                     buffer: new Blob([], { type: mimeTypeToUse }), offset: 0, isUploading: false, queue: [],
                     driveId: '', geminiUri: '', geminiName: '', isFinalized: false,
-                    partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false
+                    partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false,
+                    sessionCourseId: sessionCourseId, role: role, folderId: initData.folderId // 儲存回傳的資料夾 ID
                 };
-            } catch(e) {
-                showRecorderMsg(type, "通道建立失敗: " + e.message, true, true);
-                return;
-            }
+            } catch(e) { showRecorderMsg(type, "通道建立失敗: " + e.message, true, true); return; }
 
-            recordedChunks = []; 
-            const targetBps = isMobileDevice() ? 5000000 : 8000000;
-
-            let options = { videoBitsPerSecond: targetBps };
-            if (!isMobileDevice() && mimeTypeToUse) {
-                options.mimeType = mimeTypeToUse;
-            }
+            recordedChunks = []; const targetBps = isMobileDevice() ? 5000000 : 8000000;
+            let options = { videoBitsPerSecond: targetBps }; if (!isMobileDevice() && mimeTypeToUse) options.mimeType = mimeTypeToUse;
 
             mediaRecorder = new MediaRecorder(combinedStream, options);
             
@@ -1311,7 +943,6 @@
                 if (e.data.size > 0) { 
                     recordedChunks.push(e.data);
                     const state = streamStates[type];
-                    
                     state.buffer = new Blob([state.buffer, e.data], { type: mimeTypeToUse });
                     
                     if (state.buffer.size >= CHUNK_SIZE_MULTIPLE) {
@@ -1326,28 +957,21 @@
 
             mediaRecorder.onstop = function() {
                 const state = streamStates[type];
+                if (state.buffer && state.buffer.size > 0) state.queue.push({ blob: state.buffer, isFinal: true, isSplitting: state.isSplitting });
+                else state.queue.push({ blob: new Blob([], { type: mimeTypeToUse }), isFinal: true, isSplitting: state.isSplitting });
                 
-                if (state.buffer && state.buffer.size > 0) {
-                    state.queue.push({ blob: state.buffer, isFinal: true, isSplitting: state.isSplitting });
-                } else {
-                    state.queue.push({ blob: new Blob([], { type: mimeTypeToUse }), isFinal: true, isSplitting: state.isSplitting });
-                }
                 state.buffer = new Blob([], { type: mimeTypeToUse });
                 processUploadQueue(type);
 
-                if (state.isSplitting) return; // 若只是自動切割，就不還原 UI
+                if (state.isSplitting) return;
 
                 clearInterval(state.splitTimer);
-                
                 let actualMimeType = mediaRecorder.mimeType || 'video/mp4';
                 currentLocalBlob[type] = new Blob(recordedChunks, { type: actualMimeType });
                 
                 const previewVideo = document.getElementById(`${type}-preview-video`);
-                previewVideo.srcObject = null; 
-                previewVideo.src = URL.createObjectURL(currentLocalBlob[type]); 
-                previewVideo.controls = true; 
-                previewVideo.muted = false; 
-                previewVideo.style.pointerEvents = 'auto'; 
+                previewVideo.srcObject = null; previewVideo.src = URL.createObjectURL(currentLocalBlob[type]); 
+                previewVideo.controls = true; previewVideo.muted = false; previewVideo.style.pointerEvents = 'auto'; 
                 
                 document.getElementById(`${type}-overlay-controls`).style.display = 'none';
                 document.getElementById(`${type}-preview-actions`).style.display = 'block'; 
@@ -1363,34 +987,21 @@
             mediaRecorder.start(1000); 
             
             // 啟動 3 分鐘切割倒數
-            streamStates[type].splitTimer = setInterval(() => {
-                triggerSplit(type);
-            }, 3 * 60 * 1000);
+            streamStates[type].splitTimer = setInterval(() => { triggerSplit(type); }, 3 * 60 * 1000);
 
             document.getElementById(`${type}-btn-glass-start`).style.display = 'none';
-            const pauseBtn = document.getElementById(`${type}-btn-glass-pause`);
-            pauseBtn.style.display = 'flex';
-            pauseBtn.innerHTML = pauseSvg; 
-            
-            document.getElementById(`${type}-btn-glass-stop`).style.display = 'flex';
-            isPaused = false;
-            
-            wakeUpRecorderControls(type); 
-            showRecorderMsg(type, "正在錄製中...", false, true);
+            const pauseBtn = document.getElementById(`${type}-btn-glass-pause`); pauseBtn.style.display = 'flex'; pauseBtn.innerHTML = pauseSvg; 
+            document.getElementById(`${type}-btn-glass-stop`).style.display = 'flex'; isPaused = false;
+            wakeUpRecorderControls(type); showRecorderMsg(type, "正在錄製中...", false, true);
         }
 
         function stopRecording(type) { 
-            const state = streamStates[type];
-            if (state && state.splitTimer) clearInterval(state.splitTimer);
-            if (mediaRecorder && mediaRecorder.state !== "inactive") {
-                if (state) state.isSplitting = false;
-                mediaRecorder.stop(); 
-            }
+            const state = streamStates[type]; if (state && state.splitTimer) clearInterval(state.splitTimer);
+            if (mediaRecorder && mediaRecorder.state !== "inactive") { if (state) state.isSplitting = false; mediaRecorder.stop(); }
         }
         
         function cancelRecording(type) { 
-            const state = streamStates[type];
-            if (state && state.splitTimer) clearInterval(state.splitTimer);
+            const state = streamStates[type]; if (state && state.splitTimer) clearInterval(state.splitTimer);
             if (mediaRecorder && (mediaRecorder.state === "recording" || mediaRecorder.state === "paused")) { 
                 if(state) state.isSplitting = false;
                 mediaRecorder.stop(); mediaRecorder.onstop = () => { killMediaTracks(); resetRecordingUI(type); }; 
@@ -1398,47 +1009,21 @@
         }
         
         function discardRecording(type) {
-            const state = streamStates[type];
-            if (state && state.splitTimer) clearInterval(state.splitTimer);
+            const state = streamStates[type]; if (state && state.splitTimer) clearInterval(state.splitTimer);
             if (state) {
                 if (state.driveUrl) fetch(state.driveUrl, { method: 'DELETE' }).catch(e => {});
                 if (state.geminiUrl) fetch(state.geminiUrl, { method: 'DELETE' }).catch(e => {});
-                
-                state.completedParts.forEach(part => {
-                    fetch(`https://www.googleapis.com/drive/v3/files/${part.driveId}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${ScriptApp?.getOAuthToken() || ''}` }
-                    }).catch(e=>{});
-                });
             }
-            streamStates[type] = null;
-            currentLocalBlob[type] = null;
-            recordedChunks = [];
-            resetRecordingUI(type);
+            streamStates[type] = null; currentLocalBlob[type] = null; recordedChunks = []; resetRecordingUI(type);
         }
 
         function resetRecordingUI(type) {
-            document.getElementById(`${type}-btn-setup-record`).style.display = 'flex';
-            document.getElementById(`${type}-recorder-wrapper`).style.display = 'none';
-            document.getElementById(`${type}-preview-actions`).style.display = 'none';
-            
-            document.getElementById(`${type}-btn-glass-start`).style.display = 'flex';
-            document.getElementById(`${type}-btn-glass-pause`).style.display = 'none';
-            document.getElementById(`${type}-btn-glass-stop`).style.display = 'none';
-            
-            document.getElementById(`${type}-overlay-controls`).style.display = 'flex';
-            document.getElementById(`${type}-overlay-controls`).classList.remove('show');
-            
-            const wrapper = document.getElementById(`${type}-recorder-wrapper`);
-            if (wrapper) wrapper.classList.remove('pseudo-fullscreen');
-            if (document.fullscreenElement) document.exitFullscreen().catch(()=>{});
-            else if (document.webkitFullscreenElement) document.webkitExitFullscreen();
-
-            const previewVideo = document.getElementById(`${type}-preview-video`);
-            previewVideo.src = ''; 
-            previewVideo.controls = false;
-            previewVideo.style.pointerEvents = 'none'; 
-            
+            document.getElementById(`${type}-btn-setup-record`).style.display = 'flex'; document.getElementById(`${type}-recorder-wrapper`).style.display = 'none'; document.getElementById(`${type}-preview-actions`).style.display = 'none';
+            document.getElementById(`${type}-btn-glass-start`).style.display = 'flex'; document.getElementById(`${type}-btn-glass-pause`).style.display = 'none'; document.getElementById(`${type}-btn-glass-stop`).style.display = 'none';
+            document.getElementById(`${type}-overlay-controls`).style.display = 'flex'; document.getElementById(`${type}-overlay-controls`).classList.remove('show');
+            const wrapper = document.getElementById(`${type}-recorder-wrapper`); if (wrapper) wrapper.classList.remove('pseudo-fullscreen');
+            if (document.fullscreenElement) document.exitFullscreen().catch(()=>{}); else if (document.webkitFullscreenElement) document.webkitExitFullscreen();
+            const previewVideo = document.getElementById(`${type}-preview-video`); previewVideo.src = ''; previewVideo.controls = false; previewVideo.style.pointerEvents = 'none'; 
             document.getElementById(`${type}-record-status-msg`).style.display = 'none';
         }
 
@@ -1465,16 +1050,13 @@
                     if (line) htmlLines.push(`<p>${line}</p>`);
                 }
             }
-            if (inList) htmlLines.push('</ul>');
-            let html = htmlLines.join('');
+            if (inList) htmlLines.push('</ul>'); let html = htmlLines.join('');
             html = html.replace(/\*\*(.*?)\*\*/g, '<span class="highlight-pill">$1</span>');
-            html = html.replace(/(?:\[|\()(\d{1,2}:\d{2}(?::\d{2})?)(?:\]|\))/g, '<span class="timecode-badge">$1</span>');
-            return html;
+            html = html.replace(/(?:\[|\()(\d{1,2}:\d{2}(?::\d{2})?)(?:\]|\))/g, '<span class="timecode-badge">$1</span>'); return html;
         }
 
         function formatText(text) {
-            if (!text) return ''; let isProcessing = text.includes('[SYS:處理中]'); let cleanText = text;
-            let sysLogs = [];
+            if (!text) return ''; let isProcessing = text.includes('[SYS:處理中]'); let cleanText = text; let sysLogs = [];
             cleanText = cleanText.replace(/\[系統紀錄：(.*?)\]/g, (match, p1) => { sysLogs.push(p1.trim()); return ""; });
             cleanText = cleanText.replace(/\[SYS:REC_VIDEO=.+?\]/g, ''); cleanText = cleanText.replace(/\[SYS:LOW_CONFIDENCE\]/g, '');
             cleanText = cleanText.replace(/\[SYS:ORIGINAL_DESC\]([\s\S]*?)\[\/SYS:ORIGINAL_DESC\]/g, (match, p1) => { return `${p1.trim()}\n\n====================\n【AI 輔助解析】\n`; });
@@ -1482,12 +1064,10 @@
 
             let originalText = ""; let aiText = cleanText;
             if (cleanText.includes("【AI 輔助解析】")) {
-                let parts = cleanText.split("【AI 輔助解析】");
-                originalText = parts[0].replace(/====================/g, '').trim(); aiText = parts.slice(1).join("【AI 輔助解析】").trim();
+                let parts = cleanText.split("【AI 輔助解析】"); originalText = parts[0].replace(/====================/g, '').trim(); aiText = parts.slice(1).join("【AI 輔助解析】").trim();
             }
 
-            aiText = aiText.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            if (originalText) originalText = originalText.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            aiText = aiText.replace(/</g, '&lt;').replace(/>/g, '&gt;'); if (originalText) originalText = originalText.replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
             const sections = [
                 { id: 1, name: "此篇重點", regex: /1\.\s*此篇重點：([\s\S]*?)(?=2\.\s*需求提問\/回應或再提問：|$)/ },
@@ -1501,15 +1081,12 @@
 
             if (hasSections) {
                 html = '<div class="ai-analysis-container">';
-                if (originalText) {
-                    html += `<div class="ai-section-block" style="border: 2px solid #E0F2FE; background: #F8FAFC; margin-bottom: 12px;"><div class="ai-section-header collapsible" onclick="toggleAiSection(this)"><div style="display:flex; align-items:center;"><span class="section-mark" style="background: #3B82F6;"></span> 手動輸入內容</div><span class="toggle-btn"><span class="arrow-down"></span> 點擊展開</span></div><div class="ai-section-body" style="display:none; color:#0F172A; font-weight:500;">${processMarkdown(originalText)}</div></div>`;
-                }
+                if (originalText) { html += `<div class="ai-section-block" style="border: 2px solid #E0F2FE; background: #F8FAFC; margin-bottom: 12px;"><div class="ai-section-header collapsible" onclick="toggleAiSection(this)"><div style="display:flex; align-items:center;"><span class="section-mark" style="background: #3B82F6;"></span> 手動輸入內容</div><span class="toggle-btn"><span class="arrow-down"></span> 點擊展開</span></div><div class="ai-section-body" style="display:none; color:#0F172A; font-weight:500;">${processMarkdown(originalText)}</div></div>`; }
                 sections.forEach(sec => {
                     let match = aiText.match(sec.regex);
                     if (match && match[1].trim() && match[1].trim() !== "無") {
                         let content = processMarkdown(match[1].trim()); 
-                        let isCollapsible = true; 
-                        html += `<div class="ai-section-block"><div class="ai-section-header ${isCollapsible ? 'collapsible' : ''}" ${isCollapsible ? 'onclick="toggleAiSection(this)"' : ''}><div style="display:flex; align-items:center;"><span class="section-mark"></span> ${sec.name}</div>${isCollapsible ? '<span class="toggle-btn"><span class="arrow-down"></span> 點擊展開</span>' : ''}</div><div class="ai-section-body" ${isCollapsible ? 'style="display:none;"' : ''}>${content}</div></div>`;
+                        html += `<div class="ai-section-block"><div class="ai-section-header collapsible" onclick="toggleAiSection(this)"><div style="display:flex; align-items:center;"><span class="section-mark"></span> ${sec.name}</div><span class="toggle-btn"><span class="arrow-down"></span> 點擊展開</span></div><div class="ai-section-body" style="display:none;">${content}</div></div>`;
                     }
                 });
                 html += '</div>';
@@ -1541,81 +1118,64 @@
         }
 
         // ==========================================
-        // 劇院級播放器渲染與控制邏輯 (結合極致防護版 + 多圖輪播)
+        // 劇院級播放器渲染與控制邏輯 (全新多影片折疊 UI)
         // ==========================================
         function getMediaIframe(urlStr) {
             if (!urlStr) return ''; 
             const urls = urlStr.split(','); 
-            let html = '';
-            
-            let driveUrls = [];
-            let ytUrls = [];
+            let html = ''; let driveUrls = []; let ytUrls = [];
             
             urls.forEach(url => {
                 const matchDrive = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/\/d\/([a-zA-Z0-9_-]+)/);
                 const isYT = url.includes('youtu.be') || url.includes('youtube.com');
-                if (isYT) ytUrls.push(url);
-                else if (matchDrive) driveUrls.push({ url: url, id: matchDrive[1] });
+                if (isYT) ytUrls.push(url); else if (matchDrive) driveUrls.push({ url: url, id: matchDrive[1] });
             });
 
-            ytUrls.forEach((url, idx) => {
-                let ytId = url.split('/').pop().replace('watch?v=', '').split('?')[0];
-                let uid = Math.random().toString(36).substr(2, 9);
-                
+            ytUrls.forEach((url) => {
+                let ytId = url.split('/').pop().replace('watch?v=', '').split('?')[0]; let uid = Math.random().toString(36).substr(2, 9);
                 html += `
                 <p style="font-size:0.85rem; color:var(--accent-green); font-weight:bold; margin-bottom:8px; background:#ECFDF5; padding:6px 10px; border-radius:6px; border:1px solid #A7F3D0;"><span class="system-label" style="border-color:var(--accent-green); color:var(--accent-green);">畫質提示</span> 本系統具備防護遮罩，若畫面模糊，請點擊右下角「全螢幕」，系統將於 2~3 秒後自動為您切換至 1080p 高畫質！</p>
                 <div class="custom-player-container" id="container-${uid}" oncontextmenu="return false;">
-                    <div class="player-video-wrapper">
-                        <div id="player-${uid}" class="yt-placeholder" data-vid="${ytId}"></div>
-                        <div class="overlay-mask" onclick="togglePlayerPlay('${uid}')"></div>
-                    </div>
+                    <div class="player-video-wrapper"><div id="player-${uid}" class="yt-placeholder" data-vid="${ytId}"></div><div class="overlay-mask" onclick="togglePlayerPlay('${uid}')"></div></div>
                     <div class="custom-controls" id="controls-${uid}">
                         <button class="player-btn" id="play-btn-${uid}" onclick="togglePlayerPlay('${uid}')">${playSvg}</button>
-                        <span class="player-time-display" id="time-${uid}">0:00 / 0:00</span>
-                        <span class="player-percentage-display" id="pct-${uid}">0%</span>
-                        
-                        <div class="player-progress-container" id="prog-container-${uid}" onclick="seekPlayerVideo(event, '${uid}')">
-                            <div class="player-progress-bar" id="prog-bar-${uid}"></div>
-                        </div>
-
-                        <div class="player-volume-container">
-                            <button class="player-btn" id="mute-btn-${uid}" onclick="togglePlayerMute('${uid}')" title="靜音">${volHighSvg}</button>
-                            <input type="range" class="player-volume-slider" id="vol-${uid}" min="0" max="100" value="100" oninput="changePlayerVolume(event, '${uid}')">
-                        </div>
-
+                        <span class="player-time-display" id="time-${uid}">0:00 / 0:00</span><span class="player-percentage-display" id="pct-${uid}">0%</span>
+                        <div class="player-progress-container" id="prog-container-${uid}" onclick="seekPlayerVideo(event, '${uid}')"><div class="player-progress-bar" id="prog-bar-${uid}"></div></div>
+                        <div class="player-volume-container"><button class="player-btn" id="mute-btn-${uid}" onclick="togglePlayerMute('${uid}')" title="靜音">${volHighSvg}</button><input type="range" class="player-volume-slider" id="vol-${uid}" min="0" max="100" value="100" oninput="changePlayerVolume(event, '${uid}')"></div>
                         <button class="player-btn" onclick="togglePlayerFullscreen('${uid}')" title="全螢幕">${fullScreenSvg}</button>
                     </div>
                 </div>`;
             });
 
-            // 處理 Google Drive 檔案 (多個切片時呈現多圖劇院滑動)
+            // 處理 Google Drive 檔案 (動態展開/收合式影片列表)
             if (driveUrls.length > 1) {
-                let uid = Math.random().toString(36).substr(2, 9);
-                
-                let slidesHtml = driveUrls.map((item, idx) => {
-                    let imgSrc = `https://drive.google.com/thumbnail?id=${item.id}&sz=w1200`;
-                    // 若是多切片影片，我們直接提供點擊按鈕或在新分頁開啟完整影片
-                    return `<div class="tc-slide" style="flex-direction:column; gap:10px;"><img src="${imgSrc}" loading="lazy"><a href="${item.url}" target="_blank" style="color:var(--primary-yellow); font-weight:bold; text-decoration:none; background:rgba(0,0,0,0.5); padding:5px 15px; border-radius:8px;">▶ 播放 Part ${idx+1}</a></div>`;
+                let itemsHtml = driveUrls.map((item, idx) => {
+                    return `
+                    <div style="margin-bottom: 20px;">
+                        <p style="font-weight: 900; color: var(--slate-blue); margin: 0 0 8px 0; font-size: 1rem; display: flex; align-items: center;">
+                            <span class="hint-label" style="margin-right: 8px;">Part ${idx + 1}</span>
+                        </p>
+                        <div class="video-wrapper" style="margin-top: 0 !important;">
+                            <div class="video-container">
+                                <iframe src="https://drive.google.com/file/d/${item.id}/preview" allowfullscreen></iframe>
+                            </div>
+                        </div>
+                    </div>`;
                 }).join('');
                 
-                let dotsHtml = driveUrls.map((_, idx) => `<div class="tc-dot ${idx===0?'active':''}" onclick="jumpTroyCarousel('${uid}', ${idx}); event.stopPropagation();"></div>`).join('');
-                
                 html += `
-                <p style="font-size:0.85rem; color:var(--text-muted); font-weight:bold; margin-bottom:8px; text-align:center;">此錄影因防護機制切分為 ${driveUrls.length} 個片段，請左右滑動查看</p>
-                <div class="troy-carousel" id="troy-carousel-${uid}" onmousemove="wakeUpCarouselControls('${uid}')" ontouchstart="wakeUpCarouselControls('${uid}', {passive: true})" onclick="wakeUpCarouselControls('${uid}')">
-                    <div class="tc-track" id="tc-track-${uid}">
-                        ${slidesHtml}
-                    </div>
-                    
-                    <div class="tc-controls-bar" id="tc-controls-${uid}">
-                        <button class="tc-btn" onclick="moveTroyCarousel('${uid}', -1); event.stopPropagation();" title="上一部">${prevSvg}</button>
-                        <div class="tc-indicators-wrapper" id="tc-ind-${uid}">
-                            ${dotsHtml}
+                <div class="ai-section-block" style="border: 2px dashed #CBD5E1; background: #F8FAFC; margin-bottom: 15px; padding: 14px;">
+                    <div class="ai-section-header collapsible" onclick="toggleAiSection(this)" style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;">
+                        <div style="display:flex; align-items:center; font-size: 1rem;">
+                            <span class="section-mark" style="background: var(--slate-blue);"></span>
+                            本紀錄包含 <strong>&nbsp;${driveUrls.length}&nbsp;</strong> 個影音片段
                         </div>
-                        <button class="tc-btn" onclick="moveTroyCarousel('${uid}', 1); event.stopPropagation();" title="下一部">${nextSvg}</button>
+                        <span class="toggle-btn"><span class="arrow-down"></span> 點擊展開</span>
                     </div>
-
-                    <img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" onload="initTroyCarousel('${uid}', ${driveUrls.length})" style="display:none;">
+                    <div class="ai-section-body" style="display:none; border-top: 1px dashed #CBD5E1; padding-top: 16px; margin-top: 12px;">
+                        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">※ 因系統安全防護機制，較長的錄影會自動為您切割保護。請依序觀看：</p>
+                        ${itemsHtml}
+                    </div>
                 </div>`;
             } else if (driveUrls.length === 1) {
                 html += `<div class="video-wrapper"><div class="video-container"><iframe src="https://drive.google.com/file/d/${driveUrls[0].id}/preview" allowfullscreen></iframe></div></div>`; 
@@ -1626,27 +1186,15 @@
 
         function initAllYTPlayers() {
             document.querySelectorAll('.yt-placeholder').forEach(el => {
-                let uid = el.id.replace('player-', '');
-                let vid = el.dataset.vid;
+                let uid = el.id.replace('player-', ''); let vid = el.dataset.vid;
                 if(!ytPlayers[uid]) {
                     ytPlayers[uid] = new YT.Player(el.id, {
-    videoId: vid,
-    width: '100%',   
-    height: '100%',  
-    playerVars: { 'controls': 0, 'disablekb': 1, 'rel': 0, 'modestbranding': 1, 'playsinline': 1, 'iv_load_policy': 3, 'vq': 'hd1080' },
-    events: {
-                            'onReady': (e) => onPlayerReady(uid, e),
-                            'onStateChange': (e) => onPlayerStateChange(uid, e)
-                        }
+                        videoId: vid, width: '100%', height: '100%',  
+                        playerVars: { 'controls': 0, 'disablekb': 1, 'rel': 0, 'modestbranding': 1, 'playsinline': 1, 'iv_load_policy': 3, 'vq': 'hd1080' },
+                        events: { 'onReady': (e) => onPlayerReady(uid, e), 'onStateChange': (e) => onPlayerStateChange(uid, e) }
                     });
-                    
-                    const container = document.getElementById(`container-${uid}`);
-                    const resetUI = () => resetPlayerControlsTimeout(uid);
-                    if(container) {
-                        container.addEventListener('mousemove', resetUI);
-                        container.addEventListener('mousedown', resetUI);
-                        container.addEventListener('touchstart', resetUI, {passive: true});
-                    }
+                    const container = document.getElementById(`container-${uid}`); const resetUI = () => resetPlayerControlsTimeout(uid);
+                    if(container) { container.addEventListener('mousemove', resetUI); container.addEventListener('mousedown', resetUI); container.addEventListener('touchstart', resetUI, {passive: true}); }
                 }
             });
         }
@@ -1654,147 +1202,73 @@
         function onPlayerReady(uid, event) {
             try { if (ytPlayers[uid].setPlaybackQuality) ytPlayers[uid].setPlaybackQuality('hd1080'); } catch(e) {}
             if (!document.getElementById(`vol-${uid}`)) return; 
-            updatePlayerTime(uid);
-            const currentVol = ytPlayers[uid].getVolume();
-            document.getElementById(`vol-${uid}`).value = currentVol;
-            updatePlayerVolumeIcon(uid, currentVol, ytPlayers[uid].isMuted());
+            updatePlayerTime(uid); const currentVol = ytPlayers[uid].getVolume(); document.getElementById(`vol-${uid}`).value = currentVol; updatePlayerVolumeIcon(uid, currentVol, ytPlayers[uid].isMuted());
         }
 
         function onPlayerStateChange(uid, event) {
-            const playBtn = document.getElementById(`play-btn-${uid}`);
-            if (!playBtn) return;
-            if (event.data === YT.PlayerState.PLAYING) {
-                playBtn.innerHTML = pauseSvg;
-                ytUpdateTimers[uid] = setInterval(() => updatePlayerTime(uid), 100);
-            } else {
-                playBtn.innerHTML = playSvg;
-                clearInterval(ytUpdateTimers[uid]);
-            }
+            const playBtn = document.getElementById(`play-btn-${uid}`); if (!playBtn) return;
+            if (event.data === YT.PlayerState.PLAYING) { playBtn.innerHTML = pauseSvg; ytUpdateTimers[uid] = setInterval(() => updatePlayerTime(uid), 100); } 
+            else { playBtn.innerHTML = playSvg; clearInterval(ytUpdateTimers[uid]); }
             resetPlayerControlsTimeout(uid);
         }
 
         function togglePlayerPlay(uid) {
-            if (!ytPlayers[uid] || !ytPlayers[uid].getPlayerState) return;
-            const state = ytPlayers[uid].getPlayerState();
-            if (state === YT.PlayerState.PLAYING) ytPlayers[uid].pauseVideo();
-            else ytPlayers[uid].playVideo();
+            if (!ytPlayers[uid] || !ytPlayers[uid].getPlayerState) return; const state = ytPlayers[uid].getPlayerState();
+            if (state === YT.PlayerState.PLAYING) ytPlayers[uid].pauseVideo(); else ytPlayers[uid].playVideo();
         }
 
         function updatePlayerTime(uid) {
             if (!ytPlayers[uid] || !ytPlayers[uid].getCurrentTime) return;
-            const current = ytPlayers[uid].getCurrentTime();
-            const duration = ytPlayers[uid].getDuration();
-            if (duration === 0) return;
-            
-            const timeEl = document.getElementById(`time-${uid}`);
-            if (!timeEl) return;
-
+            const current = ytPlayers[uid].getCurrentTime(); const duration = ytPlayers[uid].getDuration(); if (duration === 0) return;
+            const timeEl = document.getElementById(`time-${uid}`); if (!timeEl) return;
             timeEl.innerText = formatTime(current) + ' / ' + formatTime(duration);
             const percentage = (current / duration) * 100;
-            document.getElementById(`prog-bar-${uid}`).style.width = percentage + '%';
-            document.getElementById(`pct-${uid}`).innerText = Math.round(percentage) + '%';
+            document.getElementById(`prog-bar-${uid}`).style.width = percentage + '%'; document.getElementById(`pct-${uid}`).innerText = Math.round(percentage) + '%';
         }
 
         function seekPlayerVideo(event, uid) {
-            if (!ytPlayers[uid] || !ytPlayers[uid].getDuration) return;
-            const container = document.getElementById(`prog-container-${uid}`);
-            if (!container) return;
-            const clickX = event.clientX - container.getBoundingClientRect().left;
-            const percentage = clickX / container.getBoundingClientRect().width;
-            ytPlayers[uid].seekTo(percentage * ytPlayers[uid].getDuration(), true);
-            updatePlayerTime(uid);
+            if (!ytPlayers[uid] || !ytPlayers[uid].getDuration) return; const container = document.getElementById(`prog-container-${uid}`); if (!container) return;
+            const clickX = event.clientX - container.getBoundingClientRect().left; const percentage = clickX / container.getBoundingClientRect().width;
+            ytPlayers[uid].seekTo(percentage * ytPlayers[uid].getDuration(), true); updatePlayerTime(uid);
         }
 
         function changePlayerVolume(event, uid) {
-            if (!ytPlayers[uid]) return;
-            const vol = event.target.value;
-            ytPlayers[uid].setVolume(vol);
-            if (ytPlayers[uid].isMuted() && vol > 0) ytPlayers[uid].unMute();
-            updatePlayerVolumeIcon(uid, vol, false);
+            if (!ytPlayers[uid]) return; const vol = event.target.value; ytPlayers[uid].setVolume(vol);
+            if (ytPlayers[uid].isMuted() && vol > 0) ytPlayers[uid].unMute(); updatePlayerVolumeIcon(uid, vol, false);
         }
 
         function togglePlayerMute(uid) {
-            if (!ytPlayers[uid]) return;
-            const isMuted = ytPlayers[uid].isMuted();
-            if (isMuted) {
-                ytPlayers[uid].unMute();
-                let currentVol = ytPlayers[uid].getVolume();
-                if (currentVol === 0) { currentVol = 50; ytPlayers[uid].setVolume(50); }
-                document.getElementById(`vol-${uid}`).value = currentVol;
-                updatePlayerVolumeIcon(uid, currentVol, false);
-            } else {
-                ytPlayers[uid].mute();
-                document.getElementById(`vol-${uid}`).value = 0;
-                updatePlayerVolumeIcon(uid, 0, true);
-            }
+            if (!ytPlayers[uid]) return; const isMuted = ytPlayers[uid].isMuted();
+            if (isMuted) { ytPlayers[uid].unMute(); let currentVol = ytPlayers[uid].getVolume(); if (currentVol === 0) { currentVol = 50; ytPlayers[uid].setVolume(50); } document.getElementById(`vol-${uid}`).value = currentVol; updatePlayerVolumeIcon(uid, currentVol, false); } 
+            else { ytPlayers[uid].mute(); document.getElementById(`vol-${uid}`).value = 0; updatePlayerVolumeIcon(uid, 0, true); }
         }
 
         function updatePlayerVolumeIcon(uid, vol, isMuted) {
-            const muteBtn = document.getElementById(`mute-btn-${uid}`);
-            if (!muteBtn) return;
-            if (isMuted || vol == 0) muteBtn.innerHTML = muteSvg;
-            else if (vol < 50) muteBtn.innerHTML = volLowSvg;
-            else muteBtn.innerHTML = volHighSvg;
+            const muteBtn = document.getElementById(`mute-btn-${uid}`); if (!muteBtn) return;
+            if (isMuted || vol == 0) muteBtn.innerHTML = muteSvg; else if (vol < 50) muteBtn.innerHTML = volLowSvg; else muteBtn.innerHTML = volHighSvg;
         }
 
-        function formatTime(seconds) {
-            const m = Math.floor(seconds / 60); const s = Math.floor(seconds % 60);
-            return m + ":" + (s < 10 ? "0" : "") + s;
-        }
+        function formatTime(seconds) { const m = Math.floor(seconds / 60); const s = Math.floor(seconds % 60); return m + ":" + (s < 10 ? "0" : "") + s; }
 
         function resetPlayerControlsTimeout(uid) {
-            const controls = document.getElementById(`controls-${uid}`);
-            const container = document.getElementById(`container-${uid}`);
-            if (!controls || !container) return; 
-            
-            controls.classList.add('show-controls');
-            container.classList.remove('hide-cursor');
-            
+            const controls = document.getElementById(`controls-${uid}`); const container = document.getElementById(`container-${uid}`);
+            if (!controls || !container) return; controls.classList.add('show-controls'); container.classList.remove('hide-cursor');
             if (ytHideTimers[uid]) clearTimeout(ytHideTimers[uid]);
-            
-            ytHideTimers[uid] = setTimeout(function() {
-                controls.classList.remove('show-controls');
-                if (ytPlayers[uid] && ytPlayers[uid].getPlayerState() === YT.PlayerState.PLAYING) {
-                    container.classList.add('hide-cursor');
-                }
-            }, 2500); 
+            ytHideTimers[uid] = setTimeout(function() { controls.classList.remove('show-controls'); if (ytPlayers[uid] && ytPlayers[uid].getPlayerState() === YT.PlayerState.PLAYING) { container.classList.add('hide-cursor'); } }, 2500); 
         }
 
         function togglePlayerFullscreen(uid) {
-            const container = document.getElementById(`container-${uid}`);
-            if (!container) return;
-
-            if (container.classList.contains('pseudo-fullscreen')) {
-                container.classList.remove('pseudo-fullscreen');
-                return;
-            }
-
+            const container = document.getElementById(`container-${uid}`); if (!container) return;
+            if (container.classList.contains('pseudo-fullscreen')) { container.classList.remove('pseudo-fullscreen'); return; }
             if (!document.fullscreenElement && !document.webkitFullscreenElement) {
                 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-                if (isIOS) {
-                    container.classList.add('pseudo-fullscreen');
-                } else if (container.requestFullscreen) {
-                    container.requestFullscreen().catch(err => {
-                        container.classList.add('pseudo-fullscreen'); 
-                    });
-                } else if (container.webkitRequestFullscreen) {
-                    container.webkitRequestFullscreen();
-                } else {
-                    container.classList.add('pseudo-fullscreen');
-                }
-
-                setTimeout(() => {
-                    try {
-                        if (ytPlayers[uid] && ytPlayers[uid].setPlaybackQuality) {
-                            ytPlayers[uid].setPlaybackQuality('hd1080');
-                        }
-                    } catch(e) {}
-                }, 2500);
-
+                if (isIOS) { container.classList.add('pseudo-fullscreen'); } 
+                else if (container.requestFullscreen) { container.requestFullscreen().catch(err => { container.classList.add('pseudo-fullscreen'); }); } 
+                else if (container.webkitRequestFullscreen) { container.webkitRequestFullscreen(); } 
+                else { container.classList.add('pseudo-fullscreen'); }
+                setTimeout(() => { try { if (ytPlayers[uid] && ytPlayers[uid].setPlaybackQuality) { ytPlayers[uid].setPlaybackQuality('hd1080'); } } catch(e) {} }, 2500);
             } else {
-                if (document.exitFullscreen) document.exitFullscreen();
-                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                if (document.exitFullscreen) document.exitFullscreen(); else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
             }
         }
 
@@ -1804,512 +1278,4 @@
         async function submitPost() {
             const titleInput = document.getElementById('post-title').value.trim();
             const descInput = document.getElementById('post-desc').value.trim();
-            const mediaType = document.getElementById('post-media-type').value; 
-            const btn = document.getElementById('btn-submit-post');
-            
-            btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 資料處理上傳中...';
-
-            try {
-                let finalVideoUrls = [];
-                let finalVideoIds = [];
-                let finalTitle = titleInput || "AI 正在分析您的提問...";
-                let finalDesc = descInput || "";
-
-                if (mediaType === 'image') {
-                    if(!titleInput || !descInput) throw new Error('圖片模式下，標題與描述為必填！');
-                    if (pendingImages['post'].length > 0) {
-                        const uploadResult = await uploadPendingImages('post'); 
-                        finalVideoUrls.push(uploadResult.urls); finalVideoIds.push(uploadResult.ids);
-                    } else { throw new Error('提示：請先拍攝或選擇圖片！'); }
-                    finalTitle = titleInput;
-                    finalDesc += "\n\n[SYS:處理中] AI 正在準備解析並建立專屬資料夾...";
-                } else {
-                    const state = streamStates['post'];
-                    if (!state || state.completedParts.length === 0) throw new Error("提示：請先完成錄影！");
-                    
-                    btn.innerHTML = '<span class="spinner"></span> 正在確認雲端檔案同步...';
-                    await new Promise(resolve => {
-                        const check = setInterval(() => {
-                            if (state.isFinalized) { clearInterval(check); resolve(); }
-                        }, 500);
-                    });
-                    
-                    let geminiFileDataArray = [];
-                    state.completedParts.forEach(part => {
-                        finalVideoUrls.push(`https://drive.google.com/file/d/${part.driveId}/view`);
-                        finalVideoIds.push(part.driveId);
-                        geminiFileDataArray.push(`[SYS:GEMINI_FILE=${part.geminiUri}|#|${part.geminiName}]`);
-                    });
-
-                    finalDesc += `\n\n[SYS:處理中] 影片已備份至雲端硬碟 (共 ${state.completedParts.length} 個片段)，AI 正在進行深度解析...\n${geminiFileDataArray.join('\n')}`;
-                }
-
-                await fetch(GAS_LIVE_URL, {
-                    method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'add_post', email: currentUserEmail, title: finalTitle, desc: finalDesc, videoUrl: finalVideoUrls.join(','), videoFileId: finalVideoIds.join(','), mediaType: mediaType })
-                });
-
-                btn.disabled = false; btn.innerText = "確認發布並呼叫 AI 解析";
-                document.getElementById('post-title').value = ''; document.getElementById('post-desc').value = ''; 
-                
-                clearDraft('post'); 
-                resetRecordingUI('post'); showAppMsg('post-msg', '提問發布成功！已交由 AI 處理。'); fetchLiveData(); 
-
-            } catch(err) {
-                btn.disabled = false; btn.innerText = "確認發布並呼叫 AI 解析"; return showAppMsg('post-msg', err.message, true);
-            }
-        }
-
-        async function submitReply() {
-            const descInput = document.getElementById('reply-desc').value.trim();
-            const mediaType = document.getElementById('reply-media-type').value; 
-            const btn = document.getElementById('btn-submit-reply');
-            
-            btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 資料處理上傳中...';
-
-            try {
-                let finalVideoUrls = [];
-                let finalVideoIds = [];
-                let finalDesc = descInput || "";
-
-                if (mediaType === 'image') {
-                    if(!descInput) throw new Error('圖片模式下，回覆內容必填！');
-                    if (pendingImages['reply'].length > 0) {
-                        const uploadResult = await uploadPendingImages('reply');
-                        finalVideoUrls.push(uploadResult.urls); finalVideoIds.push(uploadResult.ids);
-                    } else { throw new Error('提示：請先拍攝或選擇圖片！'); }
-                    finalDesc += "\n\n[SYS:處理中] AI 正在歸檔您的圖片並進行解析...";
-                } else {
-                    const state = streamStates['reply'];
-                    if (!state || state.completedParts.length === 0) throw new Error("提示：請先完成錄影！");
-                    
-                    btn.innerHTML = '<span class="spinner"></span> 正在確認雲端檔案同步...';
-                    await new Promise(resolve => {
-                        const check = setInterval(() => {
-                            if (state.isFinalized) { clearInterval(check); resolve(); }
-                        }, 500);
-                    });
-                    
-                    let geminiFileDataArray = [];
-                    state.completedParts.forEach(part => {
-                        finalVideoUrls.push(`https://drive.google.com/file/d/${part.driveId}/view`);
-                        finalVideoIds.push(part.driveId);
-                        geminiFileDataArray.push(`[SYS:GEMINI_FILE=${part.geminiUri}|#|${part.geminiName}]`);
-                    });
-
-                    finalDesc += `\n\n[SYS:處理中] 影片已備份至雲端硬碟 (共 ${state.completedParts.length} 個片段)，AI 正在進行深度解析...\n${geminiFileDataArray.join('\n')}`;
-                }
-
-                await fetch(GAS_LIVE_URL, {
-                    method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'add_reply', courseId: currentPost.courseId, email: currentUserEmail, desc: finalDesc, videoUrl: finalVideoUrls.join(','), videoFileId: finalVideoIds.join(','), mediaType: mediaType })
-                });
-
-                btn.disabled = false; btn.innerText = "確認發布並呼叫 AI 解析";
-                document.getElementById('reply-desc').value = ''; 
-                
-                clearDraft('reply'); 
-                resetRecordingUI('reply'); showAppMsg('reply-msg', '回覆成功！已交由 AI 處理歸檔。'); fetchLiveData(); 
-
-            } catch(err) {
-                btn.disabled = false; btn.innerText = "確認發布並呼叫 AI 解析"; return showAppMsg('reply-msg', err.message, true);
-            }
-        }
-
-        // ==========================================
-        // 意見回饋與渲染 Thread
-        // ==========================================
-        function sendFeedback(courseId, satisfaction) {
-            const box = document.getElementById(`feedback-box-${courseId}`); if(box) box.innerHTML = '<span class="spinner"></span> 正在記錄您的回饋...';
-            fetch(GAS_LIVE_URL, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'submit_feedback', courseId: courseId, satisfaction: satisfaction }) })
-            .then(res => res.json())
-            .then(data => {
-                if(data.status === 'success') { 
-                    if(satisfaction === 'yes') { showAppMsg('reply-msg', '感謝回饋！教練會繼續陪您一起成長！', false); } 
-                    else { showAppMsg('reply-msg', '已收到您的不滿意反饋，教練會盡快再次親自協助您！', true); } 
-                    fetchLiveData(); 
-                } else {
-                    if(box) box.innerHTML = `<span style="color:red; font-weight:bold;">錯誤: ${data.message}</span>`;
-                    showAppMsg('reply-msg', '紀錄失敗：' + data.message, true);
-                }
-            })
-            .catch(err => { showAppMsg('reply-msg', '系統連線異常', true); });
-        }
-
-        function renderThread(post) {
-            let items = [];
-            
-            items.push({
-                roleHtml: `<span class="role-badge student-badge">學員發問 (首發)</span> <span class="thread-email">${post.email}</span>`,
-                timeHtml: `${post.date} ${post.time}`,
-                contentHtml: `<div class="post-excerpt">${formatText(post.desc)}</div>${getMediaIframe(post.videoUrl)}`,
-                itemClass: 'student'
-            });
-
-            post.replies.forEach(reply => {
-                let parts = reply.split('|||');
-                if(parts.length >= 5) {
-                    let rDate = parts[0], rTime = parts[1], rRole = parts[2], rEmail = parts[3], rContent = parts[4], rVid = parts[5] || '';
-                    let isCoach = rRole === '陪跑教練';
-                    items.push({
-                        roleHtml: `<span class="role-badge ${isCoach ? 'coach-badge' : 'student-badge'}">${rRole}</span> <span class="thread-email">${rEmail}</span>`,
-                        timeHtml: `${rDate} ${rTime}`,
-                        contentHtml: `<div class="post-excerpt">${formatText(rContent)}</div>${getMediaIframe(rVid)}`,
-                        itemClass: isCoach ? 'coach' : 'student'
-                    });
-                }
-            });
-
-            items.reverse();
-
-            let html = '';
-
-            let hasFeedback = post.desc.includes('系統紀錄：學員');
-            if (post.status === '教練已回覆' && !hasFeedback) {
-                html += `<div id="feedback-box-${post.courseId}" class="thread-item" style="background: #F8FAFC; border: 2px dashed var(--primary-yellow); text-align: center; margin-bottom: 15px; padding: 25px 20px;"><p style="font-size:1.1rem; color:var(--slate-blue); margin-bottom:15px; font-weight:bold;">請問教練最新的解答有幫助您解決問題嗎？</p><div style="display:flex; gap:12px; justify-content:center; max-width: 300px; margin: 0 auto;"><button onclick="sendFeedback('${post.courseId}', 'yes')" style="margin:0; flex:1; background:#10B981; color:#fff; border:none; box-shadow:0 4px 6px rgba(16,185,129,0.2);">滿意</button><button onclick="sendFeedback('${post.courseId}', 'no')" style="margin:0; flex:1; background:#EF4444; color:#fff; border:none; box-shadow:0 4px 6px rgba(239,68,68,0.2);">不滿意</button></div></div>`;
-                if (items.length > 0) {
-                    html += `<div class="visual-divider"><div class="visual-divider-icon">💬</div></div>`;
-                }
-            }
-
-            items.forEach((item, index) => {
-                html += `
-                <div class="thread-item ${item.itemClass}">
-                    <div class="thread-header">
-                        <div class="thread-role">${item.roleHtml}</div>
-                        <span class="thread-time">${item.timeHtml}</span>
-                    </div>
-                    ${item.contentHtml}
-                </div>`;
-                
-                if (index < items.length - 1) {
-                    html += `<div class="visual-divider"><div class="visual-divider-icon">💬</div></div>`;
-                }
-            });
-
-            document.getElementById('thread-container').innerHTML = html;
-            
-            setTimeout(initAllYTPlayers, 100);
-        }
-
-        function enterClass(courseId) {
-            currentPost = allLiveData.find(p => p.courseId === courseId); if(!currentPost) return;
-            document.getElementById('publish-section').style.display = 'none'; document.getElementById('list-section').style.display = 'none'; document.getElementById('detail-section').style.display = 'block'; window.scrollTo({ top: 0, behavior: 'smooth' });
-            document.getElementById('detail-title').innerText = currentPost.title; document.getElementById('detail-meta').innerHTML = `<span>編號: ${currentPost.courseId}</span> <span>狀態: ${currentPost.status}</span>`;
-            
-            const authWarningContainer = document.getElementById('auth-warning-container'); const authWarningMessage = document.getElementById('auth-warning-message');
-            const authWarningBtn = document.getElementById('auth-warning-btn'); const threadContentWrapper = document.getElementById('thread-content-wrapper');
-            const validEmails = currentPost.email.toLowerCase().split(/[\n,]+/).map(e => e.trim()); const isAllowed = validEmails.includes(currentUserEmail.toLowerCase()) || currentUserEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-
-            if (!currentUserEmail) { authWarningContainer.style.display = 'flex'; threadContentWrapper.style.display = 'none'; authWarningMessage.innerHTML = '<div class="warning-label" style="display:inline-block; margin-bottom:10px;">專屬內容</div><br>請先登入或加入會員以解鎖您的權限！'; authWarningBtn.style.display = 'flex';
-            } else if (!isAllowed) { authWarningContainer.style.display = 'flex'; threadContentWrapper.style.display = 'none'; authWarningMessage.innerHTML = '<div class="warning-label" style="display:inline-block; margin-bottom:10px;">權限限制</div><br>這是其他學員的專屬日誌，為保障隱私您無權觀看。'; authWarningBtn.style.display = 'none'; 
-            } else { authWarningContainer.style.display = 'none'; threadContentWrapper.style.display = 'block'; renderThread(currentPost); }
-        }
-
-        function backToList() {
-            document.getElementById('detail-section').style.display = 'none'; document.getElementById('list-section').style.display = 'block';
-            if(currentUserEmail) document.getElementById('publish-section').style.display = 'block';
-            killMediaTracks(); resetRecordingUI('post'); resetRecordingUI('reply'); window.scrollTo({ top: 0, behavior: 'smooth' }); filterPosts();
-        }
-
-        // ==========================================
-        // 1. 系統提示與畫面滾動工具
-        // ==========================================
-        function showAppMsg(elId, msg, isError = false) {
-            const el = document.getElementById(elId);
-            if (!el) return;
-            el.innerText = msg;
-            el.className = isError ? 'inline-msg' : 'inline-msg success';
-            setTimeout(() => { el.innerText = ''; }, 5000);
-        }
-
-        function scrollToLogin() {
-            document.getElementById('login-section').scrollIntoView({ behavior: 'smooth' });
-        }
-
-        // ==========================================
-        // 2. 登入驗證流程
-        // ==========================================
-        function requestOTP() {
-            const email = document.getElementById('email').value.trim();
-            if (!email) return showAppMsg('otp-msg', '請輸入 Email', true);
-            
-            const btn = document.getElementById('btn-otp');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner"></span> 發送中...';
-
-            fetch(GAS_LIVE_URL, {
-                method: 'POST',
-                redirect: 'follow',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'requestOTP', email: email })
-            })
-            .then(res => res.json())
-            .then(data => {
-                btn.disabled = false;
-                btn.innerText = '寄送驗證碼';
-                if (data.status === 'success') {
-                    document.getElementById('step-1').style.display = 'none';
-                    document.getElementById('step-2').style.display = 'block';
-                    showAppMsg('login-msg', '驗證碼已發送至您的信箱，請查收！');
-                } else {
-                    showAppMsg('otp-msg', data.message || '發送失敗，請重試', true);
-                }
-            })
-            .catch(err => {
-                btn.disabled = false;
-                btn.innerText = '寄送驗證碼';
-                showAppMsg('otp-msg', '系統連線錯誤，請稍後再試', true);
-            });
-        }
-
-        function verifyLogin() {
-            const email = document.getElementById('email').value.trim();
-            const otp = document.getElementById('otp-code').value.trim();
-            if (!otp) return showAppMsg('login-msg', '請輸入驗證碼', true);
-
-            const btn = document.getElementById('btn-login');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner"></span> 驗證中...';
-
-            fetch(GAS_LIVE_URL, {
-                method: 'POST',
-                redirect: 'follow',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'verifyOTP', email: email, otp: otp })
-            })
-            .then(res => res.json())
-            .then(data => {
-                btn.disabled = false;
-                btn.innerText = '進入日誌'; 
-                if (data.status === 'success') {
-                    currentUserEmail = email;
-                    localStorage.setItem('user_email', email);
-                    localStorage.setItem('login_timestamp', Date.now().toString());
-
-                    document.getElementById('login-status').innerText = `目前狀態：已登入 (${email})`;
-                    document.getElementById('login-status').style.color = 'var(--accent-green)';
-                    document.getElementById('step-2').style.display = 'none';
-                    document.getElementById('btn-logout').style.display = 'block';
-                    
-                    document.getElementById('publish-section').style.display = 'block';
-                    fetchLiveData(); 
-                } else {
-                    showAppMsg('login-msg', data.message || '驗證碼錯誤', true);
-                }
-            })
-            .catch(err => {
-                btn.disabled = false;
-                btn.innerText = '進入日誌'; 
-                showAppMsg('login-msg', '系統連線錯誤', true);
-            });
-        }
-
-        function cancelLogin() {
-            document.getElementById('step-2').style.display = 'none';
-            document.getElementById('step-1').style.display = 'flex';
-            document.getElementById('otp-code').value = '';
-        }
-
-        function logout() {
-            currentUserEmail = '';
-            localStorage.removeItem('user_email');
-            localStorage.removeItem('login_timestamp');
-
-            document.getElementById('login-status').innerText = '目前狀態：未登入 (訪客)';
-            document.getElementById('login-status').style.color = 'var(--primary-yellow)';
-            document.getElementById('btn-logout').style.display = 'none';
-            document.getElementById('step-1').style.display = 'flex';
-            document.getElementById('email').value = '';
-            document.getElementById('publish-section').style.display = 'none';
-            fetchLiveData(); 
-        }
-
-        // ==========================================
-        // 3. 列表載入與靜默渲染流程
-        // ==========================================
-        function fetchLiveData(silent = false) {
-            if (!silent) {
-                document.getElementById('list-section').style.display = 'block';
-                document.getElementById('loading-list').style.display = 'block';
-                document.getElementById('post-list').innerHTML = '';
-            }
-            
-            fetch(GAS_LIVE_URL + '?action=get_live_data')
-            .then(res => res.json())
-            .then(data => {
-                if (!silent) document.getElementById('loading-list').style.display = 'none';
-                if (data.status === 'success') {
-                    allLiveData = (data.data || []).reverse();
-                    
-                    if (currentPost) {
-                        const updatedPost = allLiveData.find(p => p.courseId === currentPost.courseId);
-                        if (updatedPost) {
-                            const isChanged = (currentPost.status !== updatedPost.status || currentPost.desc !== updatedPost.desc || currentPost.replies.length !== updatedPost.replies.length);
-                            currentPost = updatedPost;
-                            
-                            if (isChanged && document.getElementById('detail-section').style.display === 'block') {
-                                renderThread(currentPost); 
-                                document.getElementById('detail-meta').innerHTML = `<span>編號: ${currentPost.courseId}</span> <span>狀態: ${currentPost.status}</span>`;
-                            }
-                        }
-                    }
-
-                    if (!silent) generateTypeNav(); 
-                    filterPosts();     
-                } else {
-                    if (!silent) document.getElementById('post-list').innerHTML = `<div class="system-msg">載入失敗：${data.message}</div>`;
-                }
-            })
-            .catch(err => {
-                if (!silent) {
-                    document.getElementById('loading-list').style.display = 'none';
-                    document.getElementById('post-list').innerHTML = '<div class="system-msg">連線發生錯誤，無法載入日誌清單。請確認 GAS 網址是否正確部屬。</div>';
-                }
-            });
-        }
-
-        function startSilentPolling() {
-            if (pollingInterval) clearInterval(pollingInterval);
-            pollingInterval = setInterval(() => {
-                fetchLiveData(true); 
-            }, 15000); 
-        }
-
-        function generateTypeNav() {
-            const container = document.getElementById('type-container');
-            const types = ['全部', ...new Set(allLiveData.map(item => item.status))];
-            container.innerHTML = types.map(type => 
-                `<button class="cat-btn ${currentStatus === type ? 'active' : ''}" onclick="setStatusFilter('${type}')">${type}</button>`
-            ).join('');
-        }
-
-        function setStatusFilter(status) {
-            currentStatus = status;
-            currentPage = 1;
-            generateTypeNav(); 
-            filterPosts();
-        }
-
-        function clearDateFilter() {
-            document.getElementById('datePicker').value = '';
-            filterPosts();
-        }
-
-        function filterPosts() {
-            const guestCta = document.getElementById('guest-cta-container');
-            const listContainer = document.getElementById('post-list');
-            const pagination = document.getElementById('pagination-container');
-
-            if (!currentUserEmail) {
-                guestCta.style.display = 'flex';
-                listContainer.style.display = 'none';
-                pagination.style.display = 'none';
-                return;
-            } else {
-                guestCta.style.display = 'none';
-                listContainer.style.display = 'block';
-                pagination.style.display = 'flex';
-            }
-
-            currentSearchQuery = document.getElementById('searchInput').value.toLowerCase();
-            const selectedDate = document.getElementById('datePicker').value;
-
-            let filtered = allLiveData.filter(post => {
-                const isAdmin = currentUserEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-                const validEmails = post.email.toLowerCase().split(/[\n,]+/).map(e => e.trim());
-                const isOwner = validEmails.includes(currentUserEmail.toLowerCase());
-
-                if (!isAdmin && !isOwner) return false;
-
-                const matchSearch = post.title.toLowerCase().includes(currentSearchQuery) || post.desc.toLowerCase().includes(currentSearchQuery);
-                const matchStatus = currentStatus === '全部' || post.status === currentStatus;
-                const matchDate = !selectedDate || post.date === selectedDate.replace(/-/g, '/'); 
-                return matchSearch && matchStatus && matchDate;
-            });
-
-            renderList(filtered);
-        }
-
-        function renderList(data) {
-            const listContainer = document.getElementById('post-list');
-            
-            if (data.length === 0) {
-                listContainer.innerHTML = '<div class="system-msg">目前沒有符合條件的陪跑紀錄。</div>';
-                document.getElementById('pagination-container').innerHTML = '';
-                return;
-            }
-
-            listContainer.innerHTML = '';
-
-            const totalPages = Math.ceil(data.length / itemsPerPage);
-            const start = (currentPage - 1) * itemsPerPage;
-            const pagedData = data.slice(start, start + itemsPerPage);
-
-            pagedData.forEach((post, index) => {
-                let statusTagClass = 'tag-pending';
-                let cardBorderClass = 'status-pending';
-                if (post.status.includes('已回覆') || post.status.includes('完成')) {
-                    statusTagClass = 'tag-replied';
-                    cardBorderClass = 'status-replied';
-                }
-
-                const card = document.createElement('div');
-                card.className = `post-card ${cardBorderClass}`;
-                card.innerHTML = `
-                    <div class="post-title-row">
-                        <span class="tag-badge ${statusTagClass}">${post.status}</span>
-                        <h3 class="post-title">${post.title}</h3>
-                    </div>
-                    <div class="post-meta">
-                        <span>學員: ${post.email.split('@')[0]}***</span>
-                        <span>發布於: ${post.date} ${post.time}</span>
-                    </div>
-                    ${getSummary(post.desc)}
-                    <button onclick="enterClass('${post.courseId}')" style="margin-top: 16px; background: var(--slate-blue);">進入日誌</button>
-                `;
-                listContainer.appendChild(card);
-
-                if (index < pagedData.length - 1) {
-                    const divider = document.createElement('div');
-                    divider.className = 'visual-divider';
-                    divider.innerHTML = '<div class="visual-divider-icon">▼</div>';
-                    listContainer.appendChild(divider);
-                }
-            });
-
-            renderPagination(totalPages);
-        }
-
-        function renderPagination(totalPages) {
-            const container = document.getElementById('pagination-container');
-            container.innerHTML = '';
-            if (totalPages <= 1) return;
-
-            for (let i = 1; i <= totalPages; i++) {
-                const btn = document.createElement('button');
-                btn.className = `page-btn ${currentPage === i ? 'active' : ''}`;
-                btn.innerText = i;
-                btn.onclick = () => { 
-                    currentPage = i; 
-                    filterPosts(); 
-                    window.scrollTo({ top: document.getElementById('list-section').offsetTop - 50, behavior: 'smooth' }); 
-                };
-                container.appendChild(btn);
-            }
-        }
-
-        // ==========================================
-        // 4. 網頁初始啟動設定
-        // ==========================================
-        window.onload = function() {
-            initDeviceUI();
-            checkLogin(); 
-            setupAutoSave(); 
-            fetchLiveData(); 
-            startSilentPolling(); 
-        };
-
-    </script>
-</body>
-</html>
+            const mediaType = document.getElementById('post-media-type').
