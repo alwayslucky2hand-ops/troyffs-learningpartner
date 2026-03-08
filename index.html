@@ -539,7 +539,7 @@
 
         // 串流直傳狀態管理 (將緩衝區降至 2MB，大幅減輕 CPU 轉碼負擔，並加快清空佇列的速度)
         // 註：Google Drive 規定切塊必須是 256KB 的倍數，2097152 剛好是 256KB * 8
-        const CHUNK_SIZE_MULTIPLE = 2097152;
+        const CHUNK_SIZE_MULTIPLE = 8388608;
         let streamStates = {
             post: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '' },
             reply: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '' }
