@@ -360,7 +360,7 @@
                     <button id="post-btn-glass-stop" class="glass-btn" onclick="stopRecording('post'); event.stopPropagation();" style="display:none;" title="結束錄影">
                         <svg viewBox="0 0 24 24" class="svg-icon"><path d="M6 6h12v12H6z"/></svg>
                     </button>
-
+                    
                     <button id="post-btn-glass-fullscreen" class="glass-btn" onclick="toggleRecorderFullscreen('post', event);" title="全螢幕切換">
                         <svg viewBox="0 0 24 24" class="svg-icon"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
                     </button>
@@ -562,6 +562,7 @@
         let recorderHideTimers = { post: null, reply: null }; 
 
         let isVideoMuted = false;
+        let currentDrawFunc = null; // 🌟 新增：用來記錄當前負責畫圖的函數，以便在背景喚醒
 
         // --- SVG Icons Definition ---
         const pauseSvg = `<svg viewBox="0 0 24 24" class="svg-icon"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
@@ -600,6 +601,19 @@
             showRecorderMsg(type, isVideoMuted ? "已隱藏畫面 (目前僅錄音中)" : "已恢復畫面錄製", false, true);
             wakeUpRecorderControls(type);
         };
+
+        // 🌟 新增：偵測網頁是否進入背景，若進入背景則強行重啟畫圖迴圈避免錄影器卡死
+        document.addEventListener("visibilitychange", () => {
+            if (mediaRecorder && (mediaRecorder.state === 'recording' || mediaRecorder.state === 'paused')) {
+                if (drawLoopId) {
+                    cancelAnimationFrame(drawLoopId);
+                    clearTimeout(drawLoopId);
+                }
+                if (currentDrawFunc) {
+                    currentDrawFunc(); // 重新觸發迴圈
+                }
+            }
+        });
 
         // ==========================================
         // 浮動控制列智能喚醒引擎 & 完美全螢幕相容
@@ -912,6 +926,7 @@
             internalCanvas = null; internalCtx = null;
             activeVideoSource = 'screen'; currentFacingMode = 'user'; isPaused = false;
             isVideoMuted = false;
+            currentDrawFunc = null;
         }
 
         function showRecorderMsg(type, text, isError = false, keep = false, isImageMode = false) {
@@ -1005,7 +1020,13 @@
 
                     function drawMobileFrame() {
                         if (!internalCtx) return; 
-                        drawLoopId = requestAnimationFrame(drawMobileFrame);
+                        
+                        // 🌟 核心優化：如果網頁在背景，改用 setTimeout (每秒 2 幀) 維持錄影器存活
+                        if (document.hidden) {
+                            drawLoopId = setTimeout(drawMobileFrame, 500);
+                        } else {
+                            drawLoopId = requestAnimationFrame(drawMobileFrame);
+                        }
                         
                         const currentIsLandscape = window.innerWidth > window.innerHeight;
                         const targetW = currentIsLandscape ? 1920 : 1080;
@@ -1024,13 +1045,14 @@
                         internalCtx.fillStyle = '#111'; 
                         internalCtx.fillRect(0, 0, internalCanvas.width, internalCanvas.height);
                         
-                        if (isVideoMuted) {
+                        // 🌟 防呆與強制更新機制
+                        if (isVideoMuted || document.hidden) {
                             internalCtx.fillStyle = '#FFF';
                             internalCtx.font = 'bold 40px Arial';
                             internalCtx.textAlign = 'center';
                             internalCtx.fillText('畫面暫時隱藏 (目前僅保留語音)', internalCanvas.width/2, internalCanvas.height/2);
 
-                            // 🔥 防呆：加入閃爍紅點強制畫面更新，避免編碼器壞死
+                            // 🔥 加入閃爍紅點強制畫面更新，避免編碼器判定畫面靜止而壞死
                             if (Math.floor(Date.now() / 600) % 2 === 0) {
                                 internalCtx.fillStyle = '#EF4444';
                                 internalCtx.beginPath();
@@ -1065,7 +1087,9 @@
                             internalCtx.restore();
                         }
                     }
-                    drawMobileFrame(); showRecorderMsg(type, "鏡頭已就緒！點擊開始錄製。", false, true);
+                    currentDrawFunc = drawMobileFrame;
+                    drawMobileFrame(); 
+                    showRecorderMsg(type, "鏡頭已就緒！點擊開始錄製。", false, true);
                 } else {
                     try { micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: useCamera ? { width: { ideal: 1920 }, height: { ideal: 1080 } } : false });
                     } catch(e) { showRecorderMsg(type, "麥克風/相機被封鎖", true, true); return; }
@@ -1084,17 +1108,24 @@
 
                     function drawPcFrame() {
                         if (!internalCtx) return; 
-                        drawLoopId = requestAnimationFrame(drawPcFrame);
+                        
+                        // 🌟 核心優化：如果網頁在背景，改用 setTimeout
+                        if (document.hidden) {
+                            drawLoopId = setTimeout(drawPcFrame, 500);
+                        } else {
+                            drawLoopId = requestAnimationFrame(drawPcFrame);
+                        }
 
                         internalCtx.fillStyle = '#111'; internalCtx.fillRect(0, 0, internalCanvas.width, internalCanvas.height);
                         
-                        if (isVideoMuted) {
+                        // 🌟 防呆與強制更新機制
+                        if (isVideoMuted || document.hidden) {
                             internalCtx.fillStyle = '#FFF';
                             internalCtx.font = 'bold 40px Arial';
                             internalCtx.textAlign = 'center';
                             internalCtx.fillText('畫面暫時隱藏 (目前僅保留語音)', internalCanvas.width/2, internalCanvas.height/2);
 
-                            // 🔥 防呆：加入閃爍紅點強制畫面更新，避免編碼器壞死
+                            // 🔥 加入閃爍紅點強制畫面更新
                             if (Math.floor(Date.now() / 600) % 2 === 0) {
                                 internalCtx.fillStyle = '#EF4444';
                                 internalCtx.beginPath();
@@ -1118,6 +1149,7 @@
                             }
                         }
                     }
+                    currentDrawFunc = drawPcFrame;
                     drawPcFrame();
                     screenStream.getVideoTracks()[0].onended = () => { if(mediaRecorder && mediaRecorder.state === "recording") stopRecording(type); else cancelRecording(type); };
                     showRecorderMsg(type, "視窗/畫面已連接！點擊開始錄製。", false, true);
