@@ -341,6 +341,10 @@
                     <button id="post-btn-glass-switch" class="glass-btn" onclick="switchVideoSource('post'); event.stopPropagation();" title="切換鏡頭/畫面">
                         <svg viewBox="0 0 24 24" class="svg-icon"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
                     </button>
+                    
+                    <button id="post-btn-glass-videomute" class="glass-btn" onclick="toggleVideoMute('post'); event.stopPropagation();" title="開啟/關閉畫面 (僅錄音)">
+                        <svg viewBox="0 0 24 24" class="svg-icon" id="post-icon-videomute"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+                    </button>
 
                     <button id="post-btn-glass-start" class="glass-btn btn-record" onclick="startRecording('post'); event.stopPropagation();" title="開始錄製">
                         <svg viewBox="0 0 24 24" class="svg-icon"><circle cx="12" cy="12" r="8"/></svg>
@@ -460,6 +464,10 @@
                                 <svg viewBox="0 0 24 24" class="svg-icon"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
                             </button>
 
+                            <button id="reply-btn-glass-videomute" class="glass-btn" onclick="toggleVideoMute('reply'); event.stopPropagation();" title="開啟/關閉畫面 (僅錄音)">
+                                <svg viewBox="0 0 24 24" class="svg-icon" id="reply-icon-videomute"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+                            </button>
+
                             <button id="reply-btn-glass-start" class="glass-btn btn-record" onclick="startRecording('reply'); event.stopPropagation();" title="開始錄製">
                                 <svg viewBox="0 0 24 24" class="svg-icon"><circle cx="12" cy="12" r="8"/></svg>
                             </button>
@@ -524,20 +532,16 @@
         let pendingImages = { post: [], reply: [] }; 
         let currentLocalBlob = { post: null, reply: null }; 
 
-        // 💡 解法一：將緩衝區大幅降至 512KB (524288 Bytes)，實現真正的「極速邊錄邊傳」！
-        // 512KB 是 Google Drive API 規定的 256KB 的兩倍，大約每錄 1~2 秒就會傳送一次碎片
         const CHUNK_SIZE_MULTIPLE = 8388608;
         let streamStates = {
             post: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '', chunkIndexCounter: 0 },
             reply: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '', chunkIndexCounter: 0 }
         };
 
-        // YouTube 播放器實例管理
         let ytPlayers = {};
         let ytUpdateTimers = {};
         let ytHideTimers = {};
 
-        // 錄影底層引擎
         let mediaRecorder; let recordedChunks = []; 
         let combinedStream, screenStream, micStream, audioContext; 
         let currentRecordType = ''; 
@@ -546,9 +550,12 @@
         let currentFacingMode = 'user';
         let internalCanvas, internalCtx, drawLoopId;
         let screenHiddenVideo, cameraHiddenVideo;
-        let lastDrawTime = 0; const fpsInterval = 1000 / 30; // 鎖定 30FPS 防當機
+        let lastDrawTime = 0; const fpsInterval = 1000 / 30; 
         
         let recorderHideTimers = { post: null, reply: null }; 
+
+        // 🌟 新增：控制是否關閉影像 (僅錄音) 的開關
+        let isVideoMuted = false;
 
         // --- SVG Icons Definition ---
         const pauseSvg = `<svg viewBox="0 0 24 24" class="svg-icon"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
@@ -557,6 +564,10 @@
         const muteSvg = `<svg viewBox="0 0 24 24" class="svg-icon" style="width:20px;height:20px;"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.73v2.06c2.89.86 5 3.54 5 6.67zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>`;
         const volLowSvg = `<svg viewBox="0 0 24 24" class="svg-icon" style="width:20px;height:20px;"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>`;
         const volHighSvg = `<svg viewBox="0 0 24 24" class="svg-icon" style="width:20px;height:20px;"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
+        
+        // 🌟 新增：開/關畫面專用 SVG
+        const videoOnSvg = `<svg viewBox="0 0 24 24" class="svg-icon"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>`;
+        const videoOffSvg = `<svg viewBox="0 0 24 24" class="svg-icon"><path d="M21 6.5l-4 4V7c0-.55-.45-1-1-1H9.82L21 17.18V6.5zM3.27 2L2 3.27 4.73 6H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.21 0 .39-.08.54-.18L19.73 21 21 19.73 3.27 2z"/></svg>`;
 
         function isMobileDevice() { return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent); }
 
@@ -572,6 +583,19 @@
                 });
             }
         }
+
+        // 🌟 新增：觸發關閉畫面的方法
+        window.toggleVideoMute = function(type) {
+            isVideoMuted = !isVideoMuted;
+            const btnIcon = document.getElementById(`${type}-icon-videomute`);
+            if (btnIcon) {
+                btnIcon.outerHTML = isVideoMuted ? 
+                    videoOffSvg.replace('class="svg-icon"', `class="svg-icon" id="${type}-icon-videomute"`) : 
+                    videoOnSvg.replace('class="svg-icon"', `class="svg-icon" id="${type}-icon-videomute"`);
+            }
+            showRecorderMsg(type, isVideoMuted ? "已隱藏畫面 (目前僅錄音中)" : "已恢復畫面錄製", false, true);
+            wakeUpRecorderControls(type);
+        };
 
         // ==========================================
         // 浮動控制列智能喚醒引擎 & 完美全螢幕相容
@@ -784,14 +808,13 @@
         }
 
         // ==========================================
-        // 核心優化：邊錄邊傳與號碼牌發放引擎 (極速序列無感傳輸)
+        // 核心優化：邊錄邊傳與號碼牌發放引擎
         // ==========================================
         async function processUploadQueue(type) {
             const state = streamStates[type];
             if (!state || state.isUploading || state.queue.length === 0) return;
             state.isUploading = true;
 
-            // 取出碎片，這包含了我們總結的「號碼牌 (chunkIndex)」
             const chunkObj = state.queue.shift();
             const { blob, isFinal, isSplitting, driveUrl, geminiUrl, offset, chunkIndex } = chunkObj; 
 
@@ -808,7 +831,6 @@
 
                 const chunkBase64 = await blobToBase64(blob);
 
-                // UI 更新：讓使用者知道第幾個碎片(號碼牌)正在背景無感傳輸
                 let progressText = `邊錄邊傳同步中... (碎片 #${chunkIndex}，已上傳 ${(offset / 1024 / 1024).toFixed(1)} MB)`;
                 if (isFinal || currentRecordType !== type) {
                     progressText = `正在雲端封裝此片段... (即將完成)`;
@@ -817,7 +839,6 @@
 
                 const payloadTotalSize = isFinal ? (offset + blob.size) : '*';
 
-                // 將號碼牌與資料一併送給後端的雙軌引擎
                 const response = await fetch(GAS_LIVE_URL, {
                     method: 'POST',
                     redirect: 'follow',
@@ -830,7 +851,7 @@
                         chunkBase64: chunkBase64,
                         start: offset, 
                         totalSize: payloadTotalSize,
-                        chunkIndex: chunkIndex // 發送號碼牌資訊
+                        chunkIndex: chunkIndex
                     })
                 });
 
@@ -859,7 +880,6 @@
                 console.error("Upload error caught:", e);
                 showRecorderMsg(type, `網路波動 (${e.message})，系統將自動重試...`, true, true);
                 
-                // 發生錯誤，將碎片塞回佇列最前面重試
                 state.queue.unshift(chunkObj);
                 
                 setTimeout(() => { 
@@ -870,7 +890,6 @@
             }
 
             state.isUploading = false;
-            // 極速呼叫下一個，因為 512KB 很小，這裡就像併發一樣瞬間清空佇列
             processUploadQueue(type);
         }
 
@@ -888,6 +907,7 @@
             if (internalCanvas && internalCanvas.parentNode) { internalCanvas.parentNode.removeChild(internalCanvas); }
             internalCanvas = null; internalCtx = null;
             activeVideoSource = 'screen'; currentFacingMode = 'user'; isPaused = false;
+            isVideoMuted = false; // 重置開關
         }
 
         function showRecorderMsg(type, text, isError = false, keep = false, isImageMode = false) {
@@ -898,7 +918,7 @@
             else if (text.includes("邊錄邊傳") || text.includes("進度") || text.includes("存入")) badgeHtml = '<span class="status-icon" style="background:#DBEAFE; color:#1E40AF;">雲端處理</span>';
             else if (text.includes("錄製中")) badgeHtml = '<span class="status-icon" style="background:#FEE2E2; color:#991B1B;">錄製中</span>';
             else if (text.includes("切割") || text.includes("封裝")) badgeHtml = '<span class="status-icon" style="background:#FCA5A5; color:#7F1D1D;">防護運作中</span>';
-            else if (text.includes("暫停") || text.includes("切換")) badgeHtml = '<span class="status-icon" style="background:#FEF3C7; color:#B45309;">暫停</span>';
+            else if (text.includes("暫停") || text.includes("切換") || text.includes("隱藏")) badgeHtml = '<span class="status-icon" style="background:#FEF3C7; color:#B45309;">暫停</span>';
             else badgeHtml = '<span class="status-icon status-success">系統提示</span>';
             msgEl.innerHTML = badgeHtml + text; msgEl.style.display = 'block';
             if(!keep && !isError) setTimeout(() => msgEl.style.display = 'none', 5000);
@@ -945,6 +965,11 @@
         async function setupRecording(type) {
             currentRecordType = type; showRecorderMsg(type, "正在請求權限...", false, true);
             const useCamera = document.getElementById(`${type}-use-camera-cb`) ? document.getElementById(`${type}-use-camera-cb`).checked : false;
+
+            // 確保每次重新啟動錄影時影像皆為開啟狀態
+            isVideoMuted = false;
+            const videoMuteIcon = document.getElementById(`${type}-icon-videomute`);
+            if(videoMuteIcon) videoMuteIcon.outerHTML = videoOnSvg.replace('class="svg-icon"', `class="svg-icon" id="${type}-icon-videomute"`);
 
             try {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)(); const dest = audioContext.createMediaStreamDestination();
@@ -996,7 +1021,13 @@
                         internalCtx.fillStyle = '#000'; 
                         internalCtx.fillRect(0, 0, internalCanvas.width, internalCanvas.height);
                         
-                        if (cameraHiddenVideo.readyState >= 2 && cameraHiddenVideo.videoWidth > 0) {
+                        // 🌟 若已關閉畫面，則只畫文字；否則正常畫圖
+                        if (isVideoMuted) {
+                            internalCtx.fillStyle = '#FFF';
+                            internalCtx.font = 'bold 40px Arial';
+                            internalCtx.textAlign = 'center';
+                            internalCtx.fillText('畫面已隱藏 (目前僅保留語音)', internalCanvas.width/2, internalCanvas.height/2);
+                        } else if (cameraHiddenVideo.readyState >= 2 && cameraHiddenVideo.videoWidth > 0) {
                             const vRatio = cameraHiddenVideo.videoWidth / cameraHiddenVideo.videoHeight; 
                             const cRatio = internalCanvas.width / internalCanvas.height;
                             let drawWidth, drawHeight, x, y;
@@ -1046,19 +1077,28 @@
                         drawLoopId = requestAnimationFrame(drawPcFrame);
 
                         internalCtx.fillStyle = '#111'; internalCtx.fillRect(0, 0, internalCanvas.width, internalCanvas.height);
-                        let sourceVid = (activeVideoSource === 'screen') ? screenHiddenVideo : cameraHiddenVideo;
                         
-                        if (!sourceVid && activeVideoSource === 'camera') {
-                            internalCtx.fillStyle = '#FFF'; internalCtx.font = '30px Arial'; internalCtx.textAlign = 'center'; internalCtx.fillText('未開啟或未偵測到鏡頭', internalCanvas.width/2, internalCanvas.height/2);
-                        } else if (sourceVid && sourceVid.readyState >= 2 && sourceVid.videoWidth > 0) {
-                            const vRatio = sourceVid.videoWidth / sourceVid.videoHeight; const cRatio = internalCanvas.width / internalCanvas.height;
-                            let drawWidth, drawHeight, x, y;
-                            if (vRatio > cRatio) { drawWidth = internalCanvas.width; drawHeight = internalCanvas.width / vRatio; x = 0; y = (internalCanvas.height - drawHeight) / 2;
-                            } else { drawHeight = internalCanvas.height; drawWidth = internalCanvas.height * vRatio; x = (internalCanvas.width - drawWidth) / 2; y = 0; }
-                            internalCtx.save();
-                            if (activeVideoSource === 'camera') { internalCtx.translate(x + drawWidth / 2, y + drawHeight / 2); internalCtx.scale(-1, 1); internalCtx.drawImage(sourceVid, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
-                            } else { internalCtx.drawImage(sourceVid, x, y, drawWidth, drawHeight); }
-                            internalCtx.restore();
+                        // 🌟 若已關閉畫面，則只畫文字；否則正常畫圖
+                        if (isVideoMuted) {
+                            internalCtx.fillStyle = '#FFF';
+                            internalCtx.font = 'bold 40px Arial';
+                            internalCtx.textAlign = 'center';
+                            internalCtx.fillText('畫面已隱藏 (目前僅保留語音)', internalCanvas.width/2, internalCanvas.height/2);
+                        } else {
+                            let sourceVid = (activeVideoSource === 'screen') ? screenHiddenVideo : cameraHiddenVideo;
+                            
+                            if (!sourceVid && activeVideoSource === 'camera') {
+                                internalCtx.fillStyle = '#FFF'; internalCtx.font = '30px Arial'; internalCtx.textAlign = 'center'; internalCtx.fillText('未開啟或未偵測到鏡頭', internalCanvas.width/2, internalCanvas.height/2);
+                            } else if (sourceVid && sourceVid.readyState >= 2 && sourceVid.videoWidth > 0) {
+                                const vRatio = sourceVid.videoWidth / sourceVid.videoHeight; const cRatio = internalCanvas.width / internalCanvas.height;
+                                let drawWidth, drawHeight, x, y;
+                                if (vRatio > cRatio) { drawWidth = internalCanvas.width; drawHeight = internalCanvas.width / vRatio; x = 0; y = (internalCanvas.height - drawHeight) / 2;
+                                } else { drawHeight = internalCanvas.height; drawWidth = internalCanvas.height * vRatio; x = (internalCanvas.width - drawWidth) / 2; y = 0; }
+                                internalCtx.save();
+                                if (activeVideoSource === 'camera') { internalCtx.translate(x + drawWidth / 2, y + drawHeight / 2); internalCtx.scale(-1, 1); internalCtx.drawImage(sourceVid, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+                                } else { internalCtx.drawImage(sourceVid, x, y, drawWidth, drawHeight); }
+                                internalCtx.restore();
+                            }
                         }
                     }
                     drawPcFrame();
@@ -1122,7 +1162,7 @@
                     state.geminiUrl = initData.uploadUrlGemini;
                     state.buffer = new Blob([], { type: mediaRecorder.mimeType || 'video/mp4' });
                     state.offset = 0;
-                    state.chunkIndexCounter = 0; // 新的 Part，號碼牌重算
+                    state.chunkIndexCounter = 0; 
                     state.isFinalized = false;
 
                     recordedChunks = [];
@@ -1205,13 +1245,11 @@
                     
                     state.buffer = new Blob([state.buffer, e.data], { type: mimeTypeToUse });
                     
-                    // 💡 解法一觸發點：只要緩衝區滿 512KB (極小碎片)，就立刻推進佇列，實現邊錄邊傳
                     if (state.buffer.size >= CHUNK_SIZE_MULTIPLE) {
                         const bytesToUpload = Math.floor(state.buffer.size / CHUNK_SIZE_MULTIPLE) * CHUNK_SIZE_MULTIPLE;
                         const chunkToUpload = state.buffer.slice(0, bytesToUpload);
                         state.buffer = state.buffer.slice(bytesToUpload);
                         
-                        // 發放號碼牌 (Chunk Index) 進入佇列
                         state.queue.push({ 
                             chunkIndex: state.chunkIndexCounter++,
                             blob: chunkToUpload, 
@@ -1234,7 +1272,7 @@
                 let finalBlob = state.buffer && state.buffer.size > 0 ? state.buffer : new Blob([], { type: mimeTypeToUse });
 
                 state.queue.push({ 
-                    chunkIndex: state.chunkIndexCounter++, // 最後一塊的號碼牌
+                    chunkIndex: state.chunkIndexCounter++,
                     blob: finalBlob, 
                     isFinal: true, 
                     isSplitting: state.isSplitting,
@@ -1350,6 +1388,11 @@
             previewVideo.style.pointerEvents = 'none'; 
             
             document.getElementById(`${type}-record-status-msg`).style.display = 'none';
+
+            // 🌟 重置開/關畫面狀態圖示
+            isVideoMuted = false;
+            const videoMuteIcon = document.getElementById(`${type}-icon-videomute`);
+            if (videoMuteIcon) videoMuteIcon.outerHTML = videoOnSvg.replace('class="svg-icon"', `class="svg-icon" id="${type}-icon-videomute"`);
         }
 
         function blobToBase64(blob) { return new Promise((resolve, _) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result.split(',')[1]); reader.readAsDataURL(blob); }); }
