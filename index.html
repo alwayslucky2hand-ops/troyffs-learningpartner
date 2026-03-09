@@ -204,7 +204,6 @@
         .recorder-video-wrapper:-webkit-full-screen { border-radius: 0; background: #000; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
         .recorder-video-wrapper.pseudo-fullscreen { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 99999 !important; border-radius: 0 !important; background: #000 !important; margin: 0 !important; display: flex; align-items: center; justify-content: center; }
         
-        /* 🔥 UI 優化：縮小按鈕大小與間距，確保在小手機螢幕上也不會滿出 */
         .glass-control-bar { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95); display: flex; align-items: center; justify-content: center; gap: 8px; background-color: rgba(30, 30, 30, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 10px 14px; border-radius: 50px; z-index: 30; opacity: 0; pointer-events: none; transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 8px 32px rgba(0,0,0,0.5); width: max-content; max-width: 95%; }
         .glass-control-bar.show { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
         .recorder-video-wrapper:fullscreen .glass-control-bar, .recorder-video-wrapper:-webkit-full-screen .glass-control-bar, .recorder-video-wrapper.pseudo-fullscreen .glass-control-bar { position: fixed !important; top: 50% !important; left: 50% !important; bottom: auto !important; transform: translate(-50%, -50%) scale(0.95) !important; }
@@ -338,6 +337,10 @@
                 <video id="post-preview-video" autoplay playsinline></video>
                 
                 <div id="post-overlay-controls" class="glass-control-bar">
+                    <button id="post-btn-glass-cancel" class="glass-btn" onclick="abortRecording('post', event);" title="取消錄製 (不保存)">
+                        <svg viewBox="0 0 24 24" class="svg-icon"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                    </button>
+
                     <button id="post-btn-glass-switch" class="glass-btn" onclick="switchVideoSource('post'); event.stopPropagation();" title="切換鏡頭/畫面">
                         <svg viewBox="0 0 24 24" class="svg-icon"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
                     </button>
@@ -356,10 +359,6 @@
 
                     <button id="post-btn-glass-stop" class="glass-btn" onclick="stopRecording('post'); event.stopPropagation();" style="display:none;" title="結束錄影">
                         <svg viewBox="0 0 24 24" class="svg-icon"><path d="M6 6h12v12H6z"/></svg>
-                    </button>
-                    
-                    <button id="post-btn-glass-cancel" class="glass-btn" onclick="abortRecording('post', event);" title="取消錄製 (不保存)">
-                        <svg viewBox="0 0 24 24" class="svg-icon"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
                     </button>
 
                     <button id="post-btn-glass-fullscreen" class="glass-btn" onclick="toggleRecorderFullscreen('post', event);" title="全螢幕切換">
@@ -464,6 +463,10 @@
                         <video id="reply-preview-video" autoplay playsinline></video>
                         
                         <div id="reply-overlay-controls" class="glass-control-bar">
+                            <button id="reply-btn-glass-cancel" class="glass-btn" onclick="abortRecording('reply', event);" title="取消錄製 (不保存)">
+                                <svg viewBox="0 0 24 24" class="svg-icon"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                            </button>
+
                             <button id="reply-btn-glass-switch" class="glass-btn" onclick="switchVideoSource('reply'); event.stopPropagation();" title="切換鏡頭/畫面">
                                 <svg viewBox="0 0 24 24" class="svg-icon"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
                             </button>
@@ -482,10 +485,6 @@
 
                             <button id="reply-btn-glass-stop" class="glass-btn" onclick="stopRecording('reply'); event.stopPropagation();" style="display:none;" title="結束錄影">
                                 <svg viewBox="0 0 24 24" class="svg-icon"><path d="M6 6h12v12H6z"/></svg>
-                            </button>
-                            
-                            <button id="reply-btn-glass-cancel" class="glass-btn" onclick="abortRecording('reply', event);" title="取消錄製 (不保存)">
-                                <svg viewBox="0 0 24 24" class="svg-icon"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
                             </button>
 
                             <button id="reply-btn-glass-fullscreen" class="glass-btn" onclick="toggleRecorderFullscreen('reply', event);" title="全螢幕切換">
@@ -923,7 +922,7 @@
             else if (text.includes("邊錄邊傳") || text.includes("進度") || text.includes("存入")) badgeHtml = '<span class="status-icon" style="background:#DBEAFE; color:#1E40AF;">雲端處理</span>';
             else if (text.includes("錄製中")) badgeHtml = '<span class="status-icon" style="background:#FEE2E2; color:#991B1B;">錄製中</span>';
             else if (text.includes("切割") || text.includes("封裝")) badgeHtml = '<span class="status-icon" style="background:#FCA5A5; color:#7F1D1D;">防護運作中</span>';
-            else if (text.includes("暫停") || text.includes("切換") || text.includes("隱藏")) badgeHtml = '<span class="status-icon" style="background:#FEF3C7; color:#B45309;">暫停</span>';
+            else if (text.includes("暫停") || text.includes("切換") || text.includes("隱藏") || text.includes("取消")) badgeHtml = '<span class="status-icon" style="background:#FEF3C7; color:#B45309;">提醒</span>';
             else badgeHtml = '<span class="status-icon status-success">系統提示</span>';
             msgEl.innerHTML = badgeHtml + text; msgEl.style.display = 'block';
             if(!keep && !isError) setTimeout(() => msgEl.style.display = 'none', 5000);
@@ -1022,14 +1021,22 @@
                             if (wrapper.style.aspectRatio !== currentAspect) wrapper.style.aspectRatio = currentAspect;
                         }
 
-                        internalCtx.fillStyle = '#000'; 
+                        internalCtx.fillStyle = '#111'; 
                         internalCtx.fillRect(0, 0, internalCanvas.width, internalCanvas.height);
                         
                         if (isVideoMuted) {
                             internalCtx.fillStyle = '#FFF';
                             internalCtx.font = 'bold 40px Arial';
                             internalCtx.textAlign = 'center';
-                            internalCtx.fillText('畫面已隱藏 (目前僅保留語音)', internalCanvas.width/2, internalCanvas.height/2);
+                            internalCtx.fillText('畫面暫時隱藏 (目前僅保留語音)', internalCanvas.width/2, internalCanvas.height/2);
+
+                            // 🔥 防呆：加入閃爍紅點強制畫面更新，避免編碼器壞死
+                            if (Math.floor(Date.now() / 600) % 2 === 0) {
+                                internalCtx.fillStyle = '#EF4444';
+                                internalCtx.beginPath();
+                                internalCtx.arc(internalCanvas.width/2 - 320, internalCanvas.height/2 - 12, 16, 0, Math.PI * 2);
+                                internalCtx.fill();
+                            }
                         } else if (cameraHiddenVideo.readyState >= 2 && cameraHiddenVideo.videoWidth > 0) {
                             const vRatio = cameraHiddenVideo.videoWidth / cameraHiddenVideo.videoHeight; 
                             const cRatio = internalCanvas.width / internalCanvas.height;
@@ -1085,7 +1092,15 @@
                             internalCtx.fillStyle = '#FFF';
                             internalCtx.font = 'bold 40px Arial';
                             internalCtx.textAlign = 'center';
-                            internalCtx.fillText('畫面已隱藏 (目前僅保留語音)', internalCanvas.width/2, internalCanvas.height/2);
+                            internalCtx.fillText('畫面暫時隱藏 (目前僅保留語音)', internalCanvas.width/2, internalCanvas.height/2);
+
+                            // 🔥 防呆：加入閃爍紅點強制畫面更新，避免編碼器壞死
+                            if (Math.floor(Date.now() / 600) % 2 === 0) {
+                                internalCtx.fillStyle = '#EF4444';
+                                internalCtx.beginPath();
+                                internalCtx.arc(internalCanvas.width/2 - 320, internalCanvas.height/2 - 12, 16, 0, Math.PI * 2);
+                                internalCtx.fill();
+                            }
                         } else {
                             let sourceVid = (activeVideoSource === 'screen') ? screenHiddenVideo : cameraHiddenVideo;
                             
@@ -1345,7 +1360,6 @@
             const state = streamStates[type];
             if (state && state.splitTimer) clearInterval(state.splitTimer);
             
-            // 停止 MediaRecorder，但不讓它執行完成上傳的程序
             if (mediaRecorder && mediaRecorder.state !== "inactive") {
                 mediaRecorder.onstop = () => {
                     killMediaTracks();
