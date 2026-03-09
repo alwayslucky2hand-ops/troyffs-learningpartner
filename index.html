@@ -6,7 +6,6 @@
     <title>特洛伊-賦能陪跑日誌</title>
     <script src="https://www.youtube.com/iframe_api"></script>
     <style>
-        /* (你原本的 CSS 完全保留，未做任何刪減) */
         :root {
             --primary-yellow: #F59E0B; 
             --primary-hover: #D97706;      
@@ -205,14 +204,15 @@
         .recorder-video-wrapper:-webkit-full-screen { border-radius: 0; background: #000; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
         .recorder-video-wrapper.pseudo-fullscreen { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 99999 !important; border-radius: 0 !important; background: #000 !important; margin: 0 !important; display: flex; align-items: center; justify-content: center; }
         
-        .glass-control-bar { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95); display: flex; align-items: center; justify-content: center; gap: 20px; background-color: rgba(30, 30, 30, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 16px 28px; border-radius: 50px; z-index: 30; opacity: 0; pointer-events: none; transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 8px 32px rgba(0,0,0,0.5); width: max-content; max-width: 90%; }
+        /* 🔥 UI 優化：縮小按鈕大小與間距，確保在小手機螢幕上也不會滿出 */
+        .glass-control-bar { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95); display: flex; align-items: center; justify-content: center; gap: 8px; background-color: rgba(30, 30, 30, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 10px 14px; border-radius: 50px; z-index: 30; opacity: 0; pointer-events: none; transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 8px 32px rgba(0,0,0,0.5); width: max-content; max-width: 95%; }
         .glass-control-bar.show { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
         .recorder-video-wrapper:fullscreen .glass-control-bar, .recorder-video-wrapper:-webkit-full-screen .glass-control-bar, .recorder-video-wrapper.pseudo-fullscreen .glass-control-bar { position: fixed !important; top: 50% !important; left: 50% !important; bottom: auto !important; transform: translate(-50%, -50%) scale(0.95) !important; }
         .recorder-video-wrapper:fullscreen .glass-control-bar.show, .recorder-video-wrapper:-webkit-full-screen .glass-control-bar.show, .recorder-video-wrapper.pseudo-fullscreen .glass-control-bar.show { transform: translate(-50%, -50%) scale(1) !important; }
-        .glass-btn { background-color: transparent; border: none; color: white; padding: 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background-color 0.3s ease, transform 0.1s ease; box-shadow: none; margin: 0; width: auto; height: auto; }
+        .glass-btn { background-color: transparent; border: none; color: white; padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background-color 0.3s ease, transform 0.1s ease; box-shadow: none; margin: 0; width: auto; height: auto; }
         .glass-btn:hover { background-color: rgba(255, 255, 255, 0.2); transform: none; border-color: transparent; }
         .glass-btn:active { transform: scale(0.9); }
-        .svg-icon { width: 32px; height: 32px; fill: white; pointer-events: none; }
+        .svg-icon { width: 24px; height: 24px; fill: white; pointer-events: none; }
         .glass-btn.btn-record .svg-icon { fill: #ff4d4f; }
         .glass-btn.btn-record:hover { background-color: transparent; }
         .glass-btn.btn-record:hover .svg-icon { fill: #ff7875; }
@@ -358,6 +358,10 @@
                         <svg viewBox="0 0 24 24" class="svg-icon"><path d="M6 6h12v12H6z"/></svg>
                     </button>
                     
+                    <button id="post-btn-glass-cancel" class="glass-btn" onclick="abortRecording('post', event);" title="取消錄製 (不保存)">
+                        <svg viewBox="0 0 24 24" class="svg-icon"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                    </button>
+
                     <button id="post-btn-glass-fullscreen" class="glass-btn" onclick="toggleRecorderFullscreen('post', event);" title="全螢幕切換">
                         <svg viewBox="0 0 24 24" class="svg-icon"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
                     </button>
@@ -480,6 +484,10 @@
                                 <svg viewBox="0 0 24 24" class="svg-icon"><path d="M6 6h12v12H6z"/></svg>
                             </button>
                             
+                            <button id="reply-btn-glass-cancel" class="glass-btn" onclick="abortRecording('reply', event);" title="取消錄製 (不保存)">
+                                <svg viewBox="0 0 24 24" class="svg-icon"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                            </button>
+
                             <button id="reply-btn-glass-fullscreen" class="glass-btn" onclick="toggleRecorderFullscreen('reply', event);" title="全螢幕切換">
                                 <svg viewBox="0 0 24 24" class="svg-icon"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
                             </button>
@@ -554,7 +562,6 @@
         
         let recorderHideTimers = { post: null, reply: null }; 
 
-        // 🌟 新增：控制是否關閉影像 (僅錄音) 的開關
         let isVideoMuted = false;
 
         // --- SVG Icons Definition ---
@@ -565,7 +572,6 @@
         const volLowSvg = `<svg viewBox="0 0 24 24" class="svg-icon" style="width:20px;height:20px;"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>`;
         const volHighSvg = `<svg viewBox="0 0 24 24" class="svg-icon" style="width:20px;height:20px;"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
         
-        // 🌟 新增：開/關畫面專用 SVG
         const videoOnSvg = `<svg viewBox="0 0 24 24" class="svg-icon"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>`;
         const videoOffSvg = `<svg viewBox="0 0 24 24" class="svg-icon"><path d="M21 6.5l-4 4V7c0-.55-.45-1-1-1H9.82L21 17.18V6.5zM3.27 2L2 3.27 4.73 6H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.21 0 .39-.08.54-.18L19.73 21 21 19.73 3.27 2z"/></svg>`;
 
@@ -584,7 +590,6 @@
             }
         }
 
-        // 🌟 新增：觸發關閉畫面的方法
         window.toggleVideoMute = function(type) {
             isVideoMuted = !isVideoMuted;
             const btnIcon = document.getElementById(`${type}-icon-videomute`);
@@ -907,7 +912,7 @@
             if (internalCanvas && internalCanvas.parentNode) { internalCanvas.parentNode.removeChild(internalCanvas); }
             internalCanvas = null; internalCtx = null;
             activeVideoSource = 'screen'; currentFacingMode = 'user'; isPaused = false;
-            isVideoMuted = false; // 重置開關
+            isVideoMuted = false;
         }
 
         function showRecorderMsg(type, text, isError = false, keep = false, isImageMode = false) {
@@ -966,7 +971,6 @@
             currentRecordType = type; showRecorderMsg(type, "正在請求權限...", false, true);
             const useCamera = document.getElementById(`${type}-use-camera-cb`) ? document.getElementById(`${type}-use-camera-cb`).checked : false;
 
-            // 確保每次重新啟動錄影時影像皆為開啟狀態
             isVideoMuted = false;
             const videoMuteIcon = document.getElementById(`${type}-icon-videomute`);
             if(videoMuteIcon) videoMuteIcon.outerHTML = videoOnSvg.replace('class="svg-icon"', `class="svg-icon" id="${type}-icon-videomute"`);
@@ -1021,7 +1025,6 @@
                         internalCtx.fillStyle = '#000'; 
                         internalCtx.fillRect(0, 0, internalCanvas.width, internalCanvas.height);
                         
-                        // 🌟 若已關閉畫面，則只畫文字；否則正常畫圖
                         if (isVideoMuted) {
                             internalCtx.fillStyle = '#FFF';
                             internalCtx.font = 'bold 40px Arial';
@@ -1078,7 +1081,6 @@
 
                         internalCtx.fillStyle = '#111'; internalCtx.fillRect(0, 0, internalCanvas.width, internalCanvas.height);
                         
-                        // 🌟 若已關閉畫面，則只畫文字；否則正常畫圖
                         if (isVideoMuted) {
                             internalCtx.fillStyle = '#FFF';
                             internalCtx.font = 'bold 40px Arial';
@@ -1336,6 +1338,31 @@
             }
         }
         
+        // 🔥 新增：強制中斷錄製功能 (X 按鈕觸發)
+        window.abortRecording = function(type, event) {
+            if(event) event.stopPropagation();
+            
+            const state = streamStates[type];
+            if (state && state.splitTimer) clearInterval(state.splitTimer);
+            
+            // 停止 MediaRecorder，但不讓它執行完成上傳的程序
+            if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                mediaRecorder.onstop = () => {
+                    killMediaTracks();
+                    resetRecordingUI(type);
+                };
+                mediaRecorder.stop();
+            } else {
+                killMediaTracks();
+                resetRecordingUI(type);
+            }
+            
+            streamStates[type] = null;
+            currentLocalBlob[type] = null;
+            recordedChunks = [];
+            showRecorderMsg(type, "錄製已取消 (未儲存)", false, false);
+        };
+        
         function cancelRecording(type) { 
             const state = streamStates[type];
             if (state && state.splitTimer) clearInterval(state.splitTimer);
@@ -1348,17 +1375,6 @@
         function discardRecording(type) {
             const state = streamStates[type];
             if (state && state.splitTimer) clearInterval(state.splitTimer);
-            if (state) {
-                state.completedParts.forEach(part => {
-                    if (part.geminiName) {
-                        try {
-                            fetch(`https://generativelanguage.googleapis.com/v1beta/${part.geminiName}?key=${getGeminiApiKey()}`, {
-                                method: 'DELETE'
-                            }).catch(e=>{});
-                        } catch(err) {}
-                    }
-                });
-            }
             streamStates[type] = null;
             currentLocalBlob[type] = null;
             recordedChunks = [];
@@ -1389,7 +1405,6 @@
             
             document.getElementById(`${type}-record-status-msg`).style.display = 'none';
 
-            // 🌟 重置開/關畫面狀態圖示
             isVideoMuted = false;
             const videoMuteIcon = document.getElementById(`${type}-icon-videomute`);
             if (videoMuteIcon) videoMuteIcon.outerHTML = videoOnSvg.replace('class="svg-icon"', `class="svg-icon" id="${type}-icon-videomute"`);
