@@ -539,6 +539,7 @@
         let pendingImages = { post: [], reply: [] }; 
         let currentLocalBlob = { post: null, reply: null }; 
 
+        // 🔥 降為 5MB 確保穩定性
         const CHUNK_SIZE_MULTIPLE = 5242880; 
         
         let streamStates = {
@@ -564,6 +565,9 @@
 
         let isVideoMuted = false;
         let currentDrawFunc = null; 
+        
+        // 🔥 排程器變數，確保同一時間只有一個 Base64 上傳任務進行
+        let isProcessingUploadQueue = { post: false, reply: false };
 
         // --- SVG Icons Definition ---
         const pauseSvg = `<svg viewBox="0 0 24 24" class="svg-icon"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
@@ -602,18 +606,6 @@
             showRecorderMsg(type, isVideoMuted ? "已隱藏畫面 (目前僅錄音中)" : "已恢復畫面錄製", false, true);
             wakeUpRecorderControls(type);
         };
-
-        document.addEventListener("visibilitychange", () => {
-            if (mediaRecorder && (mediaRecorder.state === 'recording' || mediaRecorder.state === 'paused')) {
-                if (drawLoopId) {
-                    cancelAnimationFrame(drawLoopId);
-                    clearTimeout(drawLoopId);
-                }
-                if (currentDrawFunc) {
-                    currentDrawFunc(); 
-                }
-            }
-        });
 
         // ==========================================
         // 浮動控制列智能喚醒引擎 & 完美全螢幕相容
@@ -826,12 +818,14 @@
         }
 
         // ==========================================
-        // 核心優化：邊錄邊傳與號碼牌發放引擎
+        // 核心優化：排程器確保 Base64 轉換安全
         // ==========================================
         async function processUploadQueue(type) {
+            if (isProcessingUploadQueue[type]) return; 
             const state = streamStates[type];
-            if (!state || state.isUploading || state.queue.length === 0) return;
-            state.isUploading = true;
+            if (!state || state.queue.length === 0) return;
+
+            isProcessingUploadQueue[type] = true; 
 
             const chunkObj = state.queue.shift();
             const { blob, isFinal, isSplitting, driveUrl, geminiUrl, offset, chunkIndex } = chunkObj; 
@@ -842,12 +836,10 @@
                         state.isFinalized = true;
                         showRecorderMsg(type, "✅ 雲端備份已 100% 完成！請點擊下方確認發布。", false, true);
                     }
-                    state.isUploading = false;
+                    isProcessingUploadQueue[type] = false;
                     processUploadQueue(type);
                     return;
                 }
-
-                const chunkBase64 = await blobToBase64(blob);
 
                 let progressText = `邊錄邊傳同步中... (碎片 #${chunkIndex}，已上傳 ${(offset / 1024 / 1024).toFixed(1)} MB)`;
                 if (isFinal || currentRecordType !== type) {
@@ -855,6 +847,7 @@
                 }
                 showRecorderMsg(type, `<span class="spinner"></span> ${progressText} (請勿關閉網頁)`, false, true);
 
+                const chunkBase64 = await blobToBase64(blob);
                 const payloadTotalSize = isFinal ? (offset + blob.size) : '*';
 
                 const response = await fetch(GAS_LIVE_URL, {
@@ -901,13 +894,13 @@
                 state.queue.unshift(chunkObj);
                 
                 setTimeout(() => { 
-                    state.isUploading = false; 
+                    isProcessingUploadQueue[type] = false; 
                     processUploadQueue(type); 
                 }, 2000);
                 return;
             }
 
-            state.isUploading = false;
+            isProcessingUploadQueue[type] = false;
             processUploadQueue(type);
         }
 
@@ -919,7 +912,17 @@
             if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
             if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
             if (combinedStream) { combinedStream.getTracks().forEach(t => t.stop()); combinedStream = null; }
-            if (audioContext && audioContext.state !== 'closed') { audioContext.close(); audioContext = null; }
+            
+            if (audioContext) { 
+                if (audioContext.state !== 'closed') {
+                    audioContext.close().then(() => {
+                        audioContext = null;
+                    });
+                } else {
+                    audioContext = null;
+                }
+            }
+            
             document.querySelectorAll('.preview-video-el').forEach(v => { if (v.tagName.toLowerCase() === 'video') v.srcObject = null; });
             screenHiddenVideo = null; cameraHiddenVideo = null;
             if (internalCanvas && internalCanvas.parentNode) { internalCanvas.parentNode.removeChild(internalCanvas); }
@@ -990,7 +993,10 @@
             if(videoMuteIcon) videoMuteIcon.outerHTML = videoOnSvg.replace('class="svg-icon"', `class="svg-icon" id="${type}-icon-videomute"`);
 
             try {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)(); const dest = audioContext.createMediaStreamDestination();
+                if (!audioContext || audioContext.state === 'closed') {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)(); 
+                }
+                const dest = audioContext.createMediaStreamDestination();
                 internalCanvas = document.createElement('canvas'); 
                 
                 const isMobile = isMobileDevice();
@@ -1021,7 +1027,6 @@
                     function drawMobileFrame() {
                         if (!internalCtx) return; 
                         
-                        // 🔥 修正點 1：當切換分頁時，維持 30 FPS 持續刷新畫布
                         if (document.hidden) {
                             drawLoopId = setTimeout(drawMobileFrame, 33);
                         } else {
@@ -1045,7 +1050,6 @@
                         internalCtx.fillStyle = '#111'; 
                         internalCtx.fillRect(0, 0, internalCanvas.width, internalCanvas.height);
                         
-                        // 🔥 修正點 2：移除 document.hidden 判斷，只在你真正點擊隱藏按鈕時才顯示黑幕
                         if (isVideoMuted) {
                             internalCtx.fillStyle = '#FFF';
                             internalCtx.font = 'bold 40px Arial';
@@ -1108,7 +1112,6 @@
                     function drawPcFrame() {
                         if (!internalCtx) return; 
                         
-                        // 🔥 修正點 1：當切換分頁時，維持 30 FPS 持續刷新畫布
                         if (document.hidden) {
                             drawLoopId = setTimeout(drawPcFrame, 33);
                         } else {
@@ -1117,7 +1120,6 @@
 
                         internalCtx.fillStyle = '#111'; internalCtx.fillRect(0, 0, internalCanvas.width, internalCanvas.height);
                         
-                        // 🔥 修正點 2：移除 document.hidden 判斷，只在你真正點擊隱藏按鈕時才顯示黑幕
                         if (isVideoMuted) {
                             internalCtx.fillStyle = '#FFF';
                             internalCtx.font = 'bold 40px Arial';
@@ -1287,7 +1289,6 @@
             }
 
             recordedChunks = []; 
-            // 🔥 升級點：大幅提升 1080p 的影像清晰度，電腦版 8 Mbps，手機版 3 Mbps
             const targetBps = isMobileDevice() ? 3000000 : 8000000;
 
             let options = { videoBitsPerSecond: targetBps };
