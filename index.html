@@ -1238,14 +1238,14 @@
 
             showRecorderMsg(type, "正在初始化雲端專屬資料夾與直傳通道...", false, true);
             
-            // 🔥 優化點：提前確立瀏覽器支援的格式 (給 Drive 辨識用)
+            // 🔥 優化點：強制優先使用 WebM，對 Google Drive 的處理速度最友善
             let mimeTypeToUse = 'video/webm;codecs=vp8,opus';
-            if (MediaRecorder.isTypeSupported('video/mp4')) { 
-                mimeTypeToUse = 'video/mp4'; 
-            } else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264,opus') || MediaRecorder.isTypeSupported('video/webm;codecs=h264')) { 
+            if (MediaRecorder.isTypeSupported('video/webm;codecs=h264,opus') || MediaRecorder.isTypeSupported('video/webm;codecs=h264')) { 
                 mimeTypeToUse = 'video/webm;codecs=h264,opus'; 
             } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) { 
                 mimeTypeToUse = 'video/webm;codecs=vp8,opus'; 
+            } else if (MediaRecorder.isTypeSupported('video/mp4')) { 
+                mimeTypeToUse = 'video/mp4'; // 只有在完全不支援 WebM (例如舊版 iOS Safari) 時才用 MP4
             }
 
             const determinedExt = mimeTypeToUse.includes('mp4') ? 'mp4' : 'webm';
