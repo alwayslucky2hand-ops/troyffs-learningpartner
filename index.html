@@ -182,7 +182,7 @@
         .video-container iframe, .player-video-wrapper iframe, .yt-placeholder { 
             position: absolute !important; 
             top: 0 !important; 
-            left: 0 !important;   
+            left: 0 !important;    
             right: 0 !important;  
             bottom: 0 !important;
             width: 100% !important; 
@@ -540,9 +540,10 @@
         let currentLocalBlob = { post: null, reply: null }; 
 
         const CHUNK_SIZE_MULTIPLE = 8388608;
+        // 🔥 更新：加入 mimeType 和 videoExt 狀態暫存，讓自動切割的後續片段也能拿到正確格式
         let streamStates = {
-            post: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '', chunkIndexCounter: 0 },
-            reply: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '', chunkIndexCounter: 0 }
+            post: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '', chunkIndexCounter: 0, mimeType: 'video/webm', videoExt: 'webm' },
+            reply: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '', chunkIndexCounter: 0, mimeType: 'video/webm', videoExt: 'webm' }
         };
 
         let ytPlayers = {};
@@ -562,7 +563,7 @@
         let recorderHideTimers = { post: null, reply: null }; 
 
         let isVideoMuted = false;
-        let currentDrawFunc = null; // 🌟 新增：用來記錄當前負責畫圖的函數，以便在背景喚醒
+        let currentDrawFunc = null; 
 
         // --- SVG Icons Definition ---
         const pauseSvg = `<svg viewBox="0 0 24 24" class="svg-icon"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
@@ -602,7 +603,6 @@
             wakeUpRecorderControls(type);
         };
 
-        // 🌟 新增：偵測網頁是否進入背景，若進入背景則強行重啟畫圖迴圈避免錄影器卡死
         document.addEventListener("visibilitychange", () => {
             if (mediaRecorder && (mediaRecorder.state === 'recording' || mediaRecorder.state === 'paused')) {
                 if (drawLoopId) {
@@ -610,7 +610,7 @@
                     clearTimeout(drawLoopId);
                 }
                 if (currentDrawFunc) {
-                    currentDrawFunc(); // 重新觸發迴圈
+                    currentDrawFunc(); 
                 }
             }
         });
@@ -1201,7 +1201,10 @@
                             courseId: state.tempCourseId,
                             role: getRoleForType(type),
                             partIndex: state.partIndex,
-                            folderId: state.folderId 
+                            folderId: state.folderId,
+                            // 🔥 繼承並傳遞正確的格式與副檔名
+                            videoExt: state.videoExt,
+                            mimeType: state.mimeType
                         })
                     });
                     const initData = await initRes.json();
@@ -1209,7 +1212,7 @@
 
                     state.driveUrl = initData.uploadUrlDrive;
                     state.geminiUrl = initData.uploadUrlGemini;
-                    state.buffer = new Blob([], { type: mediaRecorder.mimeType || 'video/mp4' });
+                    state.buffer = new Blob([], { type: state.mimeType || mediaRecorder.mimeType || 'video/webm' });
                     state.offset = 0;
                     state.chunkIndexCounter = 0; 
                     state.isFinalized = false;
@@ -1235,10 +1238,17 @@
 
             showRecorderMsg(type, "正在初始化雲端專屬資料夾與直傳通道...", false, true);
             
-            let mimeTypeToUse = 'video/mp4';
-            if (MediaRecorder.isTypeSupported('video/mp4')) { mimeTypeToUse = 'video/mp4'; } 
-            else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264,opus') || MediaRecorder.isTypeSupported('video/webm;codecs=h264')) { mimeTypeToUse = 'video/webm;codecs=h264,opus'; } 
-            else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) { mimeTypeToUse = 'video/webm;codecs=vp8,opus'; }
+            // 🔥 優化點：提前確立瀏覽器支援的格式 (給 Drive 辨識用)
+            let mimeTypeToUse = 'video/webm;codecs=vp8,opus';
+            if (MediaRecorder.isTypeSupported('video/mp4')) { 
+                mimeTypeToUse = 'video/mp4'; 
+            } else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264,opus') || MediaRecorder.isTypeSupported('video/webm;codecs=h264')) { 
+                mimeTypeToUse = 'video/webm;codecs=h264,opus'; 
+            } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) { 
+                mimeTypeToUse = 'video/webm;codecs=vp8,opus'; 
+            }
+
+            const determinedExt = mimeTypeToUse.includes('mp4') ? 'mp4' : 'webm';
 
             const now = new Date();
             const tempCourseId = type === 'post' 
@@ -1255,7 +1265,10 @@
                         courseId: tempCourseId,
                         title: titleInput,
                         role: getRoleForType(type),
-                        partIndex: 1
+                        partIndex: 1,
+                        // 🔥 傳遞正確格式給後端
+                        videoExt: determinedExt,
+                        mimeType: mimeTypeToUse
                     }) 
                 });
                 const initData = await initRes.json();
@@ -1270,7 +1283,8 @@
                     buffer: new Blob([], { type: mimeTypeToUse }), offset: 0, isUploading: false, queue: [],
                     driveId: '', geminiUri: '', geminiName: '', isFinalized: false,
                     partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false,
-                    folderId: initData.folderId, tempCourseId: tempCourseId, chunkIndexCounter: 0
+                    folderId: initData.folderId, tempCourseId: tempCourseId, chunkIndexCounter: 0,
+                    mimeType: mimeTypeToUse, videoExt: determinedExt // 記錄起來讓後續切片使用
                 };
             } catch(e) {
                 showRecorderMsg(type, "通道與資料夾建立失敗: " + e.message, true, true);
@@ -1292,7 +1306,7 @@
                     recordedChunks.push(e.data);
                     const state = streamStates[type];
                     
-                    state.buffer = new Blob([state.buffer, e.data], { type: mimeTypeToUse });
+                    state.buffer = new Blob([state.buffer, e.data], { type: state.mimeType });
                     
                     if (state.buffer.size >= CHUNK_SIZE_MULTIPLE) {
                         const bytesToUpload = Math.floor(state.buffer.size / CHUNK_SIZE_MULTIPLE) * CHUNK_SIZE_MULTIPLE;
@@ -1318,7 +1332,7 @@
             mediaRecorder.onstop = function() {
                 const state = streamStates[type];
                 
-                let finalBlob = state.buffer && state.buffer.size > 0 ? state.buffer : new Blob([], { type: mimeTypeToUse });
+                let finalBlob = state.buffer && state.buffer.size > 0 ? state.buffer : new Blob([], { type: state.mimeType });
 
                 state.queue.push({ 
                     chunkIndex: state.chunkIndexCounter++,
@@ -1330,14 +1344,14 @@
                     offset: state.offset
                 });
                 
-                state.buffer = new Blob([], { type: mimeTypeToUse });
+                state.buffer = new Blob([], { type: state.mimeType });
                 processUploadQueue(type);
 
                 if (state.isSplitting) return; 
 
                 clearInterval(state.splitTimer);
                 
-                let actualMimeType = mediaRecorder.mimeType || 'video/mp4';
+                let actualMimeType = mediaRecorder.mimeType || state.mimeType || 'video/webm';
                 currentLocalBlob[type] = new Blob(recordedChunks, { type: actualMimeType });
                 
                 const previewVideo = document.getElementById(`${type}-preview-video`);
@@ -1385,7 +1399,6 @@
             }
         }
         
-        // 🔥 新增：強制中斷錄製功能 (X 按鈕觸發)
         window.abortRecording = function(type, event) {
             if(event) event.stopPropagation();
             
