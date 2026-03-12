@@ -524,7 +524,7 @@
         // ==========================================
         // 全局狀態管理 
         // ==========================================
-        const GAS_LIVE_URL = 'https://script.google.com/macros/s/AKfycbxAIQrMpgblphYv6L_LoVjqd1n7UcX7mcfQRU0ehz_2_2povF1QodBZQrDBl_2ExdXQBQ/exec'; 
+        const GAS_LIVE_URL = 'https://script.google.com/macros/s/AKfycbyqaEYMMerWIwZ_--2abKDqgay3A4VVmDtmnSQOpcnECN0wdADGrq-Jx6CNFldurwdGAA/exec'; 
         const ADMIN_EMAIL = 'alwayslucky2hand@gmail.com';
 
         let currentUserEmail = ''; 
@@ -539,7 +539,6 @@
         let pendingImages = { post: [], reply: [] }; 
         let currentLocalBlob = { post: null, reply: null }; 
 
-        // 🔥 優化：將單次封包大小從 8MB 降至 5MB，避免觸發 GAS 的 10MB 傳輸天花板
         const CHUNK_SIZE_MULTIPLE = 5242880; 
         
         let streamStates = {
@@ -1022,9 +1021,9 @@
                     function drawMobileFrame() {
                         if (!internalCtx) return; 
                         
-                        // 🌟 核心優化：如果網頁在背景，改用 setTimeout (每秒 2 幀) 維持錄影器存活
+                        // 🔥 修正點 1：當切換分頁時，維持 30 FPS 持續刷新畫布
                         if (document.hidden) {
-                            drawLoopId = setTimeout(drawMobileFrame, 500);
+                            drawLoopId = setTimeout(drawMobileFrame, 33);
                         } else {
                             drawLoopId = requestAnimationFrame(drawMobileFrame);
                         }
@@ -1046,14 +1045,13 @@
                         internalCtx.fillStyle = '#111'; 
                         internalCtx.fillRect(0, 0, internalCanvas.width, internalCanvas.height);
                         
-                        // 🌟 防呆與強制更新機制
-                        if (isVideoMuted || document.hidden) {
+                        // 🔥 修正點 2：移除 document.hidden 判斷，只在你真正點擊隱藏按鈕時才顯示黑幕
+                        if (isVideoMuted) {
                             internalCtx.fillStyle = '#FFF';
                             internalCtx.font = 'bold 40px Arial';
                             internalCtx.textAlign = 'center';
                             internalCtx.fillText('畫面暫時隱藏 (目前僅保留語音)', internalCanvas.width/2, internalCanvas.height/2);
 
-                            // 🔥 加入閃爍紅點強制畫面更新，避免編碼器判定畫面靜止而壞死
                             if (Math.floor(Date.now() / 600) % 2 === 0) {
                                 internalCtx.fillStyle = '#EF4444';
                                 internalCtx.beginPath();
@@ -1110,23 +1108,22 @@
                     function drawPcFrame() {
                         if (!internalCtx) return; 
                         
-                        // 🌟 核心優化：如果網頁在背景，改用 setTimeout
+                        // 🔥 修正點 1：當切換分頁時，維持 30 FPS 持續刷新畫布
                         if (document.hidden) {
-                            drawLoopId = setTimeout(drawPcFrame, 500);
+                            drawLoopId = setTimeout(drawPcFrame, 33);
                         } else {
                             drawLoopId = requestAnimationFrame(drawPcFrame);
                         }
 
                         internalCtx.fillStyle = '#111'; internalCtx.fillRect(0, 0, internalCanvas.width, internalCanvas.height);
                         
-                        // 🌟 防呆與強制更新機制
-                        if (isVideoMuted || document.hidden) {
+                        // 🔥 修正點 2：移除 document.hidden 判斷，只在你真正點擊隱藏按鈕時才顯示黑幕
+                        if (isVideoMuted) {
                             internalCtx.fillStyle = '#FFF';
                             internalCtx.font = 'bold 40px Arial';
                             internalCtx.textAlign = 'center';
                             internalCtx.fillText('畫面暫時隱藏 (目前僅保留語音)', internalCanvas.width/2, internalCanvas.height/2);
 
-                            // 🔥 加入閃爍紅點強制畫面更新
                             if (Math.floor(Date.now() / 600) % 2 === 0) {
                                 internalCtx.fillStyle = '#EF4444';
                                 internalCtx.beginPath();
@@ -1203,7 +1200,6 @@
                             role: getRoleForType(type),
                             partIndex: state.partIndex,
                             folderId: state.folderId,
-                            // 🔥 繼承並傳遞正確的格式與副檔名
                             videoExt: state.videoExt,
                             mimeType: state.mimeType
                         })
@@ -1239,7 +1235,6 @@
 
             showRecorderMsg(type, "正在初始化雲端專屬資料夾與直傳通道...", false, true);
             
-            // 🔥 優化點：優先檢查 WebM 相容性
             let mimeTypeToUse = 'video/webm;codecs=vp8,opus';
             if (MediaRecorder.isTypeSupported('video/webm;codecs=h264,opus') || MediaRecorder.isTypeSupported('video/webm;codecs=h264')) { 
                 mimeTypeToUse = 'video/webm;codecs=h264,opus'; 
@@ -1267,7 +1262,6 @@
                         title: titleInput,
                         role: getRoleForType(type),
                         partIndex: 1,
-                        // 🔥 傳遞正確格式給後端
                         videoExt: determinedExt,
                         mimeType: mimeTypeToUse
                     }) 
@@ -1293,7 +1287,8 @@
             }
 
             recordedChunks = []; 
-            const targetBps = isMobileDevice() ? 2500000 : 4000000;
+            // 🔥 升級點：大幅提升 1080p 的影像清晰度，電腦版 8 Mbps，手機版 3 Mbps
+            const targetBps = isMobileDevice() ? 3000000 : 8000000;
 
             let options = { videoBitsPerSecond: targetBps };
             if (!isMobileDevice() && mimeTypeToUse) {
@@ -1470,7 +1465,6 @@
             if (videoMuteIcon) videoMuteIcon.outerHTML = videoOnSvg.replace('class="svg-icon"', `class="svg-icon" id="${type}-icon-videomute"`);
         }
 
-        // 🔥 核心修復點：不再用逗號 split，精準定位 base64 內容
         function blobToBase64(blob) {
             return new Promise((resolve, _) => {
                 const reader = new FileReader();
