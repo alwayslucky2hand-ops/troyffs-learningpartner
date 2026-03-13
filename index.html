@@ -1237,16 +1237,16 @@
 
             showRecorderMsg(type, "正在初始化雲端專屬資料夾與直傳通道...", false, true);
             
-            let mimeTypeToUse = 'video/webm;codecs=vp8,opus';
-            if (MediaRecorder.isTypeSupported('video/webm;codecs=h264,opus') || MediaRecorder.isTypeSupported('video/webm;codecs=h264')) { 
-                mimeTypeToUse = 'video/webm;codecs=h264,opus'; 
-            } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) { 
+            // 🔥 終極優化點：強制鎖死只用 WebM 錄影，絕對禁止使用 MP4 導致切片損壞！
+            let mimeTypeToUse = 'video/webm'; // 最終保底格式
+            if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) { 
                 mimeTypeToUse = 'video/webm;codecs=vp8,opus'; 
-            } else if (MediaRecorder.isTypeSupported('video/mp4')) { 
-                mimeTypeToUse = 'video/mp4'; 
-            }
+            } else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264,opus') || MediaRecorder.isTypeSupported('video/webm;codecs=h264')) { 
+                mimeTypeToUse = 'video/webm;codecs=h264,opus'; 
+            } 
+            // 🚨 移除了 video/mp4 的支援判斷，強迫瀏覽器吐出可以被切片的 WebM 格式！
 
-            const determinedExt = mimeTypeToUse.includes('mp4') ? 'mp4' : 'webm';
+            const determinedExt = 'webm'; // 副檔名強制作為 webm
 
             const now = new Date();
             const tempCourseId = type === 'post' 
@@ -1291,10 +1291,7 @@
             recordedChunks = []; 
             const targetBps = isMobileDevice() ? 3000000 : 8000000;
 
-            let options = { videoBitsPerSecond: targetBps };
-            if (!isMobileDevice() && mimeTypeToUse) {
-                options.mimeType = mimeTypeToUse;
-            }
+            let options = { videoBitsPerSecond: targetBps, mimeType: mimeTypeToUse };
 
             mediaRecorder = new MediaRecorder(combinedStream, options);
             
@@ -1305,8 +1302,9 @@
                     
                     state.buffer = new Blob([state.buffer, e.data], { type: state.mimeType });
                     
-                    if (state.buffer.size >= CHUNK_SIZE_MULTIPLE) {
-                        const bytesToUpload = Math.floor(state.buffer.size / CHUNK_SIZE_MULTIPLE) * CHUNK_SIZE_MULTIPLE;
+                    // 🔥 切片大小乖乖改回 8MB (8388608) 滿足 Gemini 規則
+                    if (state.buffer.size >= 8388608) {
+                        const bytesToUpload = Math.floor(state.buffer.size / 8388608) * 8388608;
                         const chunkToUpload = state.buffer.slice(0, bytesToUpload);
                         state.buffer = state.buffer.slice(bytesToUpload);
                         
@@ -1581,7 +1579,7 @@
         // ==========================================
         // 劇院級播放器渲染與控制邏輯 
         // ==========================================
-        // 🔥 神級繞道更新：全面改用 HTML5 原生 <video> 串流播放，無視 Google Drive 處理狀態！
+        // 🔥 回歸最穩定的 Google Drive Iframe，搭配不損壞的 WebM 檔案，確保秒速轉檔與載入！
         function getMediaIframe(urlStr) {
             if (!urlStr) return ''; 
             const urls = urlStr.split(','); 
@@ -1636,13 +1634,10 @@
                         </p>
                         <div class="video-wrapper" style="margin-top: 0 !important; background: #000; border-radius: 12px; overflow: hidden;">
                             <div class="video-container">
-                                <video controls playsinline preload="metadata" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; outline: none; border: none;">
-                                    <source src="https://drive.google.com/uc?export=download&id=${item.id}" type="video/webm">
-                                    <source src="https://drive.google.com/uc?export=download&id=${item.id}" type="video/mp4">
-                                </video>
+                                <iframe src="https://drive.google.com/file/d/${item.id}/preview" allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;"></iframe>
                             </div>
                             <div style="text-align: center; padding: 10px; background: #1F2937;">
-                                <a href="https://drive.google.com/file/d/${item.id}/view" target="_blank" style="color: #F59E0B; font-size: 0.85rem; text-decoration: none; font-weight: bold;">▶ 若畫面未載入，請點此前往雲端硬碟觀看</a>
+                                <a href="https://drive.google.com/file/d/${item.id}/view" target="_blank" style="color: #F59E0B; font-size: 0.85rem; text-decoration: none; font-weight: bold;">▶ 若預覽尚未載入，請點此前往雲端硬碟觀看</a>
                             </div>
                         </div>
                     </div>`;
@@ -1666,13 +1661,10 @@
                 html += `
                 <div class="video-wrapper" style="background: #000; border-radius: 12px; overflow: hidden;">
                     <div class="video-container">
-                        <video controls playsinline preload="metadata" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; outline: none; border: none;">
-                            <source src="https://drive.google.com/uc?export=download&id=${driveUrls[0].id}" type="video/webm">
-                            <source src="https://drive.google.com/uc?export=download&id=${driveUrls[0].id}" type="video/mp4">
-                        </video>
+                        <iframe src="https://drive.google.com/file/d/${driveUrls[0].id}/preview" allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;"></iframe>
                     </div>
                     <div style="text-align: center; padding: 10px; background: #1F2937;">
-                        <a href="https://drive.google.com/file/d/${driveUrls[0].id}/view" target="_blank" style="color: #F59E0B; font-size: 0.85rem; text-decoration: none; font-weight: bold;">▶ 若畫面未載入，請點此前往雲端硬碟觀看</a>
+                        <a href="https://drive.google.com/file/d/${driveUrls[0].id}/view" target="_blank" style="color: #F59E0B; font-size: 0.85rem; text-decoration: none; font-weight: bold;">▶ 若預覽尚未載入，請點此前往雲端硬碟觀看</a>
                     </div>
                 </div>`; 
             }
