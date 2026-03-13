@@ -538,13 +538,16 @@
 
         let pendingImages = { post: [], reply: [] }; 
         let currentLocalBlob = { post: null, reply: null }; 
+        
+        // 🌟 新增：用來儲存剛錄製好的本地影片片段，實現 0 秒多段秒播！
+        window.localMediaCache = {}; 
 
         // 🔥 降為 5MB 確保穩定性
         const CHUNK_SIZE_MULTIPLE = 5242880; 
         
         let streamStates = {
-            post: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '', chunkIndexCounter: 0, mimeType: 'video/webm', videoExt: 'webm' },
-            reply: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '', chunkIndexCounter: 0, mimeType: 'video/webm', videoExt: 'webm' }
+            post: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '', chunkIndexCounter: 0, mimeType: 'video/webm', videoExt: 'webm', localBlobs: [] },
+            reply: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '', chunkIndexCounter: 0, mimeType: 'video/webm', videoExt: 'webm', localBlobs: [] }
         };
 
         let ytPlayers = {};
@@ -1237,16 +1240,14 @@
 
             showRecorderMsg(type, "正在初始化雲端專屬資料夾與直傳通道...", false, true);
             
-            // 🔥 終極優化點：強制鎖死只用 WebM 錄影，絕對禁止使用 MP4 導致切片損壞！
-            let mimeTypeToUse = 'video/webm'; // 最終保底格式
+            let mimeTypeToUse = 'video/webm'; 
             if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) { 
                 mimeTypeToUse = 'video/webm;codecs=vp8,opus'; 
             } else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264,opus') || MediaRecorder.isTypeSupported('video/webm;codecs=h264')) { 
                 mimeTypeToUse = 'video/webm;codecs=h264,opus'; 
             } 
-            // 🚨 移除了 video/mp4 的支援判斷，強迫瀏覽器吐出可以被切片的 WebM 格式！
 
-            const determinedExt = 'webm'; // 副檔名強制作為 webm
+            const determinedExt = 'webm'; 
 
             const now = new Date();
             const tempCourseId = type === 'post' 
@@ -1281,7 +1282,8 @@
                     driveId: '', geminiUri: '', geminiName: '', isFinalized: false,
                     partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false,
                     folderId: initData.folderId, tempCourseId: tempCourseId, chunkIndexCounter: 0,
-                    mimeType: mimeTypeToUse, videoExt: determinedExt 
+                    mimeType: mimeTypeToUse, videoExt: determinedExt,
+                    localBlobs: [] // 🌟 新增：用來收集切出來的每一段實體影片
                 };
             } catch(e) {
                 showRecorderMsg(type, "通道與資料夾建立失敗: " + e.message, true, true);
@@ -1302,7 +1304,6 @@
                     
                     state.buffer = new Blob([state.buffer, e.data], { type: state.mimeType });
                     
-                    // 🔥 切片大小乖乖改回 8MB (8388608) 滿足 Gemini 規則
                     if (state.buffer.size >= 8388608) {
                         const bytesToUpload = Math.floor(state.buffer.size / 8388608) * 8388608;
                         const chunkToUpload = state.buffer.slice(0, bytesToUpload);
@@ -1347,7 +1348,13 @@
                 clearInterval(state.splitTimer);
                 
                 let actualMimeType = mediaRecorder.mimeType || state.mimeType || 'video/webm';
-                currentLocalBlob[type] = new Blob(recordedChunks, { type: actualMimeType });
+                
+                // 🌟 1. 將剛剛錄完的這一段 (3分鐘內)，獨立存入陣列中
+                let currentPartBlob = new Blob(recordedChunks, { type: actualMimeType });
+                state.localBlobs.push(currentPartBlob); 
+
+                // 🌟 2. 將「所有」片段合併成一個超大 Blob，只為了給畫面上的 previewVideo 預覽用！
+                currentLocalBlob[type] = new Blob(state.localBlobs, { type: actualMimeType });
                 
                 const previewVideo = document.getElementById(`${type}-preview-video`);
                 previewVideo.srcObject = null; 
@@ -1577,11 +1584,7 @@
         }
 
         // ==========================================
-        // 劇院級播放器渲染與控制邏輯 
-        // ==========================================
-        // 🔥 回歸最穩定的 Google Drive Iframe，搭配不損壞的 WebM 檔案，確保秒速轉檔與載入！
-        // ==========================================
-        // 劇院級播放器渲染與控制邏輯 (升級極速秒播版)
+        // 劇院級播放器渲染與控制邏輯 (幽靈快取極速版)
         // ==========================================
         function getMediaIframe(urlStr) {
             if (!urlStr) return ''; 
@@ -1603,7 +1606,7 @@
                 let ytId = url.split('/').pop().replace('watch?v=', '').split('?')[0];
                 let uid = Math.random().toString(36).substr(2, 9);
                 html += `
-                <p style="font-size:0.85rem; color:var(--accent-green); font-weight:bold; margin-bottom:8px; background:#ECFDF5; padding:6px 10px; border-radius:6px; border:1px solid #A7F3D0;"><span class="system-label" style="border-color:var(--accent-green); color:var(--accent-green);">畫質提示</span> 本系統具備防護遮罩，若畫面模糊，請點擊右下角「全螢幕」，系統將自動切換高畫質！</p>
+                <p style="font-size:0.85rem; color:var(--accent-green); font-weight:bold; margin-bottom:8px; background:#ECFDF5; padding:6px 10px; border-radius:6px; border:1px solid #A7F3D0;"><span class="system-label" style="border-color:var(--accent-green); color:var(--accent-green);">畫質提示</span> 若畫面模糊，請點擊右下角「全螢幕」，系統將自動切換高畫質！</p>
                 <div class="custom-player-container" id="container-${uid}" oncontextmenu="return false;">
                     <div class="player-video-wrapper">
                         <div id="player-${uid}" class="yt-placeholder" data-vid="${ytId}"></div>
@@ -1629,35 +1632,54 @@
             if (driveUrls.length > 0) {
                 let itemsHtml = driveUrls.map((item, idx) => {
                     let driveId = item.id;
-                    let directUrl = `https://drive.google.com/uc?export=download&id=${driveId}`;
                     let previewUrl = `https://drive.google.com/file/d/${driveId}/preview`;
-                    let partLabel = driveUrls.length > 1 ? `<p style="font-weight: 900; color: var(--slate-blue); margin: 0 0 8px 0; font-size: 1rem; display: flex; align-items: center;"><span class="hint-label" style="margin-right: 8px;">Part ${idx + 1}</span></p>` : '';
-
-                    return `
-                    <div style="margin-bottom: 20px;">
-                        ${partLabel}
-                        <div class="video-wrapper" style="margin-top: 0 !important; background: #111; border-radius: 12px; overflow: hidden; position: relative;">
-                            
-                            <div id="smart-overlay-${driveId}" style="position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(31, 41, 55, 0.95); z-index:10; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding: 20px;">
-                                <div class="spinner" style="width:36px; height:36px; border-width:4px; margin-bottom:15px; border-color: var(--primary-yellow) transparent transparent transparent;"></div>
-                                <h3 style="color:white; margin:0 0 10px 0; font-size:1.1rem;">影片正在雲端高畫質封裝中...</h3>
-                                <p style="color:#94A3B8; font-size:0.85rem; margin:0 0 15px 0; line-height:1.5;">雲端轉檔約需 3-5 分鐘。若您不想等待，<br>可嘗試點擊下方按鈕，呼叫瀏覽器極速秒播！</p>
-                                <button onclick="forceNativePlay('${driveId}', '${directUrl}')" style="background:var(--accent-green); color:white; width:auto; padding:10px 20px; font-size:0.95rem; margin:0; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);">
-                                    ⚡ 啟動極速秒播 (無須等待)
-                                </button>
+                    
+                    // 🔥 檢查本地是否有剛剛錄好的快取影片？
+                    let cachedBlobUrl = window.localMediaCache[driveId];
+                    
+                    if (cachedBlobUrl) {
+                        // 🚀 觸發秒播魔法！完全不理會 Google Drive，直接播放記憶體中的高清原檔
+                        return `
+                        <div style="margin-bottom: 20px;">
+                            <p style="font-weight: 900; color: var(--accent-green); margin: 0 0 8px 0; font-size: 1rem; display: flex; align-items: center;">
+                                <span class="system-label" style="background:#D1FAE5; border:none; color:#065F46;">⚡ 本地極速回放</span>
+                                剛錄製的片段 ${idx + 1}
+                            </p>
+                            <div class="video-wrapper" style="margin-top: 0 !important; background: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 16/9;">
+                                <video controls playsinline style="width:100%; height:100%; object-fit:contain; outline:none;" src="${cachedBlobUrl}"></video>
                             </div>
-
-                            <div id="native-player-box-${driveId}" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:20; background:#000; display:none;">
+                        </div>`;
+                    } else {
+                        // 🐢 這是以前的歷史發文 (已經重整過網頁了)，只能乖乖用 Google Drive iframe
+                        let partLabel = driveUrls.length > 1 ? `<p style="font-weight: 900; color: var(--slate-blue); margin: 0 0 8px 0; font-size: 1rem; display: flex; align-items: center;"><span class="hint-label" style="margin-right: 8px;">Part ${idx + 1}</span></p>` : '';
+                        let directUrl = `https://drive.google.com/uc?export=download&id=${driveId}`;
+                        
+                        return `
+                        <div style="margin-bottom: 20px;">
+                            ${partLabel}
+                            <div class="video-wrapper" style="margin-top: 0 !important; background: #111; border-radius: 12px; overflow: hidden; position: relative;">
+                                
+                                <div id="smart-overlay-${driveId}" style="position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(31, 41, 55, 0.95); z-index:10; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding: 20px;">
+                                    <div class="spinner" style="width:36px; height:36px; border-width:4px; margin-bottom:15px; border-color: var(--primary-yellow) transparent transparent transparent;"></div>
+                                    <h3 style="color:white; margin:0 0 10px 0; font-size:1.1rem;">影片正在雲端高畫質封裝中...</h3>
+                                    <p style="color:#94A3B8; font-size:0.85rem; margin:0 0 15px 0; line-height:1.5;">雲端轉檔約需 3-5 分鐘。若您不想等待，<br>可嘗試點擊下方按鈕，呼叫瀏覽器極速秒播！</p>
+                                    <button onclick="forceNativePlay('${driveId}', '${directUrl}')" style="background:var(--accent-green); color:white; width:auto; padding:10px 20px; font-size:0.95rem; margin:0; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);">
+                                        ⚡ 啟動極速秒播 (無須等待)
+                                    </button>
                                 </div>
 
-                            <div class="video-container" style="z-index: 1;">
-                                <iframe src="${previewUrl}" allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;"></iframe>
+                                <div id="native-player-box-${driveId}" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:20; background:#000; display:none;">
+                                </div>
+
+                                <div class="video-container" style="z-index: 1;">
+                                    <iframe src="${previewUrl}" allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;"></iframe>
+                                </div>
                             </div>
-                        </div>
-                        <div style="text-align: center; padding: 10px; background: #1F2937; border-radius: 0 0 12px 12px; margin-top:-5px;">
-                            <a href="https://drive.google.com/file/d/${driveId}/view" target="_blank" style="color: #F59E0B; font-size: 0.85rem; text-decoration: none; font-weight: bold;">▶ 備用：開啟雲端硬碟新分頁觀看</a>
-                        </div>
-                    </div>`;
+                            <div style="text-align: center; padding: 10px; background: #1F2937; border-radius: 0 0 12px 12px; margin-top:-5px;">
+                                <a href="https://drive.google.com/file/d/${driveId}/view" target="_blank" style="color: #F59E0B; font-size: 0.85rem; text-decoration: none; font-weight: bold;">▶ 若上方黑屏或轉檔中，請點此開啟雲端硬碟觀看</a>
+                            </div>
+                        </div>`;
+                    }
                 }).join('');
                 
                 if (driveUrls.length > 1) {
@@ -1671,7 +1693,6 @@
                             <span class="toggle-btn"><span class="arrow-down"></span> 點擊展開</span>
                         </div>
                         <div class="ai-section-body" style="display:none; border-top: 1px dashed #CBD5E1; padding-top: 16px; margin-top: 12px;">
-                            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">※ 系統已為您啟動防護，超長錄影自動切割保護。請依序觀看：</p>
                             ${itemsHtml}
                         </div>
                     </div>`;
@@ -1683,7 +1704,6 @@
             return html;
         }
 
-        // 🌟 新增：驅動極速秒播的核心函數
         window.forceNativePlay = function(driveId, directUrl) {
             const overlay = document.getElementById(`smart-overlay-${driveId}`);
             const playerBox = document.getElementById(`native-player-box-${driveId}`);
@@ -1691,7 +1711,6 @@
             if (overlay) overlay.style.display = 'none';
             if (playerBox) {
                 playerBox.style.display = 'block';
-                // 注入 HTML5 原生 Video 標籤，利用瀏覽器原生能力直接讀取 WebM
                 playerBox.innerHTML = `
                     <video controls autoplay playsinline style="width:100%; height:100%; object-fit:contain; outline:none;">
                         <source src="${directUrl}" type="video/webm">
@@ -1702,13 +1721,12 @@
             }
         };
 
-        // 🌟 新增：關閉極速秒播，退回原本介面
         window.closeNativePlay = function(driveId) {
             const overlay = document.getElementById(`smart-overlay-${driveId}`);
             const playerBox = document.getElementById(`native-player-box-${driveId}`);
             
             if (playerBox) {
-                playerBox.innerHTML = ''; // 清空影片，停止載入
+                playerBox.innerHTML = '';
                 playerBox.style.display = 'none';
             }
             if (overlay) overlay.style.display = 'flex';
@@ -1925,10 +1943,15 @@
                     });
                     
                     let geminiFileDataArray = [];
-                    state.completedParts.forEach(part => {
+                    state.completedParts.forEach((part, index) => {
                         finalVideoUrls.push(`https://drive.google.com/file/d/${part.driveId}/view`);
                         finalVideoIds.push(part.driveId);
                         geminiFileDataArray.push(`[SYS:GEMINI_FILE=${part.geminiUri}|#|${part.geminiName}]`);
+                        
+                        // 🌟 關鍵魔法：按照順序，把 Part 1 對到 Blob 1、Part 2 對到 Blob 2...
+                        if (state.localBlobs && state.localBlobs[index]) {
+                            window.localMediaCache[part.driveId] = URL.createObjectURL(state.localBlobs[index]);
+                        }
                     });
 
                     finalDesc += `\n\n[SYS:處理中] 影片已備份至雲端硬碟 (共 ${state.completedParts.length} 個片段)，AI 正在進行深度解析...\n${geminiFileDataArray.join('\n')}`;
@@ -1992,10 +2015,15 @@
                     });
                     
                     let geminiFileDataArray = [];
-                    state.completedParts.forEach(part => {
+                    state.completedParts.forEach((part, index) => {
                         finalVideoUrls.push(`https://drive.google.com/file/d/${part.driveId}/view`);
                         finalVideoIds.push(part.driveId);
                         geminiFileDataArray.push(`[SYS:GEMINI_FILE=${part.geminiUri}|#|${part.geminiName}]`);
+                        
+                        // 🌟 關鍵魔法：按照順序，把 Part 1 對到 Blob 1、Part 2 對到 Blob 2...
+                        if (state.localBlobs && state.localBlobs[index]) {
+                            window.localMediaCache[part.driveId] = URL.createObjectURL(state.localBlobs[index]);
+                        }
                     });
 
                     finalDesc += `\n\n[SYS:處理中] 影片已備份至雲端硬碟 (共 ${state.completedParts.length} 個片段)，AI 正在進行深度解析...\n${geminiFileDataArray.join('\n')}`;
