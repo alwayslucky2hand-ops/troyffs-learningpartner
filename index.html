@@ -1580,6 +1580,9 @@
         // 劇院級播放器渲染與控制邏輯 
         // ==========================================
         // 🔥 回歸最穩定的 Google Drive Iframe，搭配不損壞的 WebM 檔案，確保秒速轉檔與載入！
+        // ==========================================
+        // 劇院級播放器渲染與控制邏輯 (升級極速秒播版)
+        // ==========================================
         function getMediaIframe(urlStr) {
             if (!urlStr) return ''; 
             const urls = urlStr.split(','); 
@@ -1595,12 +1598,12 @@
                 else if (matchDrive) driveUrls.push({ url: url, id: matchDrive[1] });
             });
 
+            // 處理 YouTube 網址 (維持不變)
             ytUrls.forEach((url, idx) => {
                 let ytId = url.split('/').pop().replace('watch?v=', '').split('?')[0];
                 let uid = Math.random().toString(36).substr(2, 9);
-                
                 html += `
-                <p style="font-size:0.85rem; color:var(--accent-green); font-weight:bold; margin-bottom:8px; background:#ECFDF5; padding:6px 10px; border-radius:6px; border:1px solid #A7F3D0;"><span class="system-label" style="border-color:var(--accent-green); color:var(--accent-green);">畫質提示</span> 本系統具備防護遮罩，若畫面模糊，請點擊右下角「全螢幕」，系統將於 2~3 秒後自動為您切換至 1080p 高畫質！</p>
+                <p style="font-size:0.85rem; color:var(--accent-green); font-weight:bold; margin-bottom:8px; background:#ECFDF5; padding:6px 10px; border-radius:6px; border:1px solid #A7F3D0;"><span class="system-label" style="border-color:var(--accent-green); color:var(--accent-green);">畫質提示</span> 本系統具備防護遮罩，若畫面模糊，請點擊右下角「全螢幕」，系統將自動切換高畫質！</p>
                 <div class="custom-player-container" id="container-${uid}" oncontextmenu="return false;">
                     <div class="player-video-wrapper">
                         <div id="player-${uid}" class="yt-placeholder" data-vid="${ytId}"></div>
@@ -1610,67 +1613,106 @@
                         <button class="player-btn" id="play-btn-${uid}" onclick="togglePlayerPlay('${uid}')">${playSvg}</button>
                         <span class="player-time-display" id="time-${uid}">0:00 / 0:00</span>
                         <span class="player-percentage-display" id="pct-${uid}">0%</span>
-                        
                         <div class="player-progress-container" id="prog-container-${uid}" onclick="seekPlayerVideo(event, '${uid}')">
                             <div class="player-progress-bar" id="prog-bar-${uid}"></div>
                         </div>
-
                         <div class="player-volume-container">
                             <button class="player-btn" id="mute-btn-${uid}" onclick="togglePlayerMute('${uid}')" title="靜音">${volHighSvg}</button>
                             <input type="range" class="player-volume-slider" id="vol-${uid}" min="0" max="100" value="100" oninput="changePlayerVolume(event, '${uid}')">
                         </div>
-
                         <button class="player-btn" onclick="togglePlayerFullscreen('${uid}')" title="全螢幕">${fullScreenSvg}</button>
                     </div>
                 </div>`;
             });
 
-            if (driveUrls.length > 1) {
+            // 🌟 升級版 Google Drive 處理邏輯
+            if (driveUrls.length > 0) {
                 let itemsHtml = driveUrls.map((item, idx) => {
+                    let driveId = item.id;
+                    let directUrl = `https://drive.google.com/uc?export=download&id=${driveId}`;
+                    let previewUrl = `https://drive.google.com/file/d/${driveId}/preview`;
+                    let partLabel = driveUrls.length > 1 ? `<p style="font-weight: 900; color: var(--slate-blue); margin: 0 0 8px 0; font-size: 1rem; display: flex; align-items: center;"><span class="hint-label" style="margin-right: 8px;">Part ${idx + 1}</span></p>` : '';
+
                     return `
                     <div style="margin-bottom: 20px;">
-                        <p style="font-weight: 900; color: var(--slate-blue); margin: 0 0 8px 0; font-size: 1rem; display: flex; align-items: center;">
-                            <span class="hint-label" style="margin-right: 8px;">Part ${idx + 1}</span>
-                        </p>
-                        <div class="video-wrapper" style="margin-top: 0 !important; background: #000; border-radius: 12px; overflow: hidden;">
-                            <div class="video-container">
-                                <iframe src="https://drive.google.com/file/d/${item.id}/preview" allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;"></iframe>
+                        ${partLabel}
+                        <div class="video-wrapper" style="margin-top: 0 !important; background: #111; border-radius: 12px; overflow: hidden; position: relative;">
+                            
+                            <div id="smart-overlay-${driveId}" style="position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(31, 41, 55, 0.95); z-index:10; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding: 20px;">
+                                <div class="spinner" style="width:36px; height:36px; border-width:4px; margin-bottom:15px; border-color: var(--primary-yellow) transparent transparent transparent;"></div>
+                                <h3 style="color:white; margin:0 0 10px 0; font-size:1.1rem;">影片正在雲端高畫質封裝中...</h3>
+                                <p style="color:#94A3B8; font-size:0.85rem; margin:0 0 15px 0; line-height:1.5;">雲端轉檔約需 3-5 分鐘。若您不想等待，<br>可嘗試點擊下方按鈕，呼叫瀏覽器極速秒播！</p>
+                                <button onclick="forceNativePlay('${driveId}', '${directUrl}')" style="background:var(--accent-green); color:white; width:auto; padding:10px 20px; font-size:0.95rem; margin:0; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);">
+                                    ⚡ 啟動極速秒播 (無須等待)
+                                </button>
                             </div>
-                            <div style="text-align: center; padding: 10px; background: #1F2937;">
-                                <a href="https://drive.google.com/file/d/${item.id}/view" target="_blank" style="color: #F59E0B; font-size: 0.85rem; text-decoration: none; font-weight: bold;">▶ 若預覽尚未載入，請點此前往雲端硬碟觀看</a>
+
+                            <div id="native-player-box-${driveId}" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:20; background:#000; display:none;">
+                                </div>
+
+                            <div class="video-container" style="z-index: 1;">
+                                <iframe src="${previewUrl}" allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;"></iframe>
                             </div>
+                        </div>
+                        <div style="text-align: center; padding: 10px; background: #1F2937; border-radius: 0 0 12px 12px; margin-top:-5px;">
+                            <a href="https://drive.google.com/file/d/${driveId}/view" target="_blank" style="color: #F59E0B; font-size: 0.85rem; text-decoration: none; font-weight: bold;">▶ 備用：開啟雲端硬碟新分頁觀看</a>
                         </div>
                     </div>`;
                 }).join('');
                 
-                html += `
-                <div class="ai-section-block" style="border: 2px dashed #CBD5E1; background: #F8FAFC; margin-bottom: 15px; padding: 14px;">
-                    <div class="ai-section-header collapsible" onclick="toggleAiSection(this)" style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;">
-                        <div style="display:flex; align-items:center; font-size: 1rem;">
-                            <span class="section-mark" style="background: var(--slate-blue);"></span>
-                            本紀錄包含 <strong>&nbsp;${driveUrls.length}&nbsp;</strong> 個影音片段
+                if (driveUrls.length > 1) {
+                    html += `
+                    <div class="ai-section-block" style="border: 2px dashed #CBD5E1; background: #F8FAFC; margin-bottom: 15px; padding: 14px;">
+                        <div class="ai-section-header collapsible" onclick="toggleAiSection(this)" style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;">
+                            <div style="display:flex; align-items:center; font-size: 1rem;">
+                                <span class="section-mark" style="background: var(--slate-blue);"></span>
+                                本紀錄包含 <strong>&nbsp;${driveUrls.length}&nbsp;</strong> 個影音片段
+                            </div>
+                            <span class="toggle-btn"><span class="arrow-down"></span> 點擊展開</span>
                         </div>
-                        <span class="toggle-btn"><span class="arrow-down"></span> 點擊展開</span>
-                    </div>
-                    <div class="ai-section-body" style="display:none; border-top: 1px dashed #CBD5E1; padding-top: 16px; margin-top: 12px;">
-                        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">※ 因系統安全防護機制，較長的錄影會自動為您切割保護。請依序觀看：</p>
-                        ${itemsHtml}
-                    </div>
-                </div>`;
-            } else if (driveUrls.length === 1) {
-                html += `
-                <div class="video-wrapper" style="background: #000; border-radius: 12px; overflow: hidden;">
-                    <div class="video-container">
-                        <iframe src="https://drive.google.com/file/d/${driveUrls[0].id}/preview" allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;"></iframe>
-                    </div>
-                    <div style="text-align: center; padding: 10px; background: #1F2937;">
-                        <a href="https://drive.google.com/file/d/${driveUrls[0].id}/view" target="_blank" style="color: #F59E0B; font-size: 0.85rem; text-decoration: none; font-weight: bold;">▶ 若預覽尚未載入，請點此前往雲端硬碟觀看</a>
-                    </div>
-                </div>`; 
+                        <div class="ai-section-body" style="display:none; border-top: 1px dashed #CBD5E1; padding-top: 16px; margin-top: 12px;">
+                            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">※ 系統已為您啟動防護，超長錄影自動切割保護。請依序觀看：</p>
+                            ${itemsHtml}
+                        </div>
+                    </div>`;
+                } else {
+                    html += itemsHtml;
+                }
             }
 
             return html;
         }
+
+        // 🌟 新增：驅動極速秒播的核心函數
+        window.forceNativePlay = function(driveId, directUrl) {
+            const overlay = document.getElementById(`smart-overlay-${driveId}`);
+            const playerBox = document.getElementById(`native-player-box-${driveId}`);
+            
+            if (overlay) overlay.style.display = 'none';
+            if (playerBox) {
+                playerBox.style.display = 'block';
+                // 注入 HTML5 原生 Video 標籤，利用瀏覽器原生能力直接讀取 WebM
+                playerBox.innerHTML = `
+                    <video controls autoplay playsinline style="width:100%; height:100%; object-fit:contain; outline:none;">
+                        <source src="${directUrl}" type="video/webm">
+                        您的瀏覽器不支援原生影片播放，請使用下方備用連結。
+                    </video>
+                    <button onclick="closeNativePlay('${driveId}')" style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.6); color:white; border:1px solid white; border-radius:6px; padding:4px 10px; font-size:0.8rem; z-index:30; width:auto; margin:0;">關閉秒播</button>
+                `;
+            }
+        };
+
+        // 🌟 新增：關閉極速秒播，退回原本介面
+        window.closeNativePlay = function(driveId) {
+            const overlay = document.getElementById(`smart-overlay-${driveId}`);
+            const playerBox = document.getElementById(`native-player-box-${driveId}`);
+            
+            if (playerBox) {
+                playerBox.innerHTML = ''; // 清空影片，停止載入
+                playerBox.style.display = 'none';
+            }
+            if (overlay) overlay.style.display = 'flex';
+        };
 
         function initAllYTPlayers() {
             document.querySelectorAll('.yt-placeholder').forEach(el => {
