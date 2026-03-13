@@ -569,6 +569,27 @@
         let isVideoMuted = false;
         let currentDrawFunc = null; 
         
+        // 🌟 核心修復：新增高精度背景計時器，防止切換分頁時錄影凍結 (Web Worker)
+        let canvasTimerWorker = null;
+        function getCanvasTimerWorker() {
+            if (!canvasTimerWorker) {
+                const code = `
+                    let timer = null;
+                    self.onmessage = function(e) {
+                        if (e.data === 'start') {
+                            if (timer) clearInterval(timer);
+                            timer = setInterval(() => self.postMessage('tick'), 33); // 約 30 FPS
+                        } else if (e.data === 'stop') {
+                            clearInterval(timer);
+                            timer = null;
+                        }
+                    };
+                `;
+                canvasTimerWorker = new Worker(URL.createObjectURL(new Blob([code], {type: 'application/javascript'})));
+            }
+            return canvasTimerWorker;
+        }
+        
         // 🔥 排程器變數，確保同一時間只有一個 Base64 上傳任務進行
         let isProcessingUploadQueue = { post: false, reply: false };
 
@@ -911,6 +932,9 @@
         // 無縫錄影與原生預覽引擎
         // ==========================================
         function killMediaTracks() {
+            // 🌟 停止背景計時器
+            if (canvasTimerWorker) { canvasTimerWorker.postMessage('stop'); }
+            
             if (drawLoopId) { cancelAnimationFrame(drawLoopId); clearTimeout(drawLoopId); drawLoopId = null; } 
             if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
             if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
@@ -1030,12 +1054,7 @@
                     function drawMobileFrame() {
                         if (!internalCtx) return; 
                         
-                        if (document.hidden) {
-                            drawLoopId = setTimeout(drawMobileFrame, 33);
-                        } else {
-                            drawLoopId = requestAnimationFrame(drawMobileFrame);
-                        }
-                        
+                        // 🌟 移除了舊的 requestAnimationFrame，改由背景 Worker 驅動
                         const currentIsLandscape = window.innerWidth > window.innerHeight;
                         const targetW = currentIsLandscape ? 1920 : 1080;
                         const targetH = currentIsLandscape ? 1080 : 1920;
@@ -1093,7 +1112,13 @@
                             internalCtx.restore();
                         }
                     }
+                    
+                    // 🌟 改由 Worker 發送訊號來更新畫面
                     currentDrawFunc = drawMobileFrame;
+                    const worker = getCanvasTimerWorker();
+                    worker.onmessage = () => { if (currentDrawFunc) currentDrawFunc(); };
+                    worker.postMessage('start');
+                    
                     drawMobileFrame(); 
                     showRecorderMsg(type, "鏡頭已就緒！點擊開始錄製。", false, true);
                 } else {
@@ -1115,12 +1140,7 @@
                     function drawPcFrame() {
                         if (!internalCtx) return; 
                         
-                        if (document.hidden) {
-                            drawLoopId = setTimeout(drawPcFrame, 33);
-                        } else {
-                            drawLoopId = requestAnimationFrame(drawPcFrame);
-                        }
-
+                        // 🌟 移除了舊的 requestAnimationFrame，改由背景 Worker 驅動
                         internalCtx.fillStyle = '#111'; internalCtx.fillRect(0, 0, internalCanvas.width, internalCanvas.height);
                         
                         if (isVideoMuted) {
@@ -1152,7 +1172,13 @@
                             }
                         }
                     }
+                    
+                    // 🌟 改由 Worker 發送訊號來更新畫面
                     currentDrawFunc = drawPcFrame;
+                    const worker = getCanvasTimerWorker();
+                    worker.onmessage = () => { if (currentDrawFunc) currentDrawFunc(); };
+                    worker.postMessage('start');
+                    
                     drawPcFrame();
                     screenStream.getVideoTracks()[0].onended = () => { if(mediaRecorder && mediaRecorder.state === "recording") stopRecording(type); else cancelRecording(type); };
                     showRecorderMsg(type, "視窗/畫面已連接！點擊開始錄製。", false, true);
@@ -1632,8 +1658,10 @@
             if (driveUrls.length > 0) {
                 let itemsHtml = driveUrls.map((item, idx) => {
                     let driveId = item.id;
+                    let directUrl = `https://drive.google.com/uc?export=download&id=${driveId}`;
                     let previewUrl = `https://drive.google.com/file/d/${driveId}/preview`;
-                    
+                    let partLabel = driveUrls.length > 1 ? `<p style="font-weight: 900; color: var(--slate-blue); margin: 0 0 8px 0; font-size: 1rem; display: flex; align-items: center;"><span class="hint-label" style="margin-right: 8px;">Part ${idx + 1}</span></p>` : '';
+
                     // 🔥 檢查本地是否有剛剛錄好的快取影片？
                     let cachedBlobUrl = window.localMediaCache[driveId];
                     
@@ -1651,9 +1679,6 @@
                         </div>`;
                     } else {
                         // 🐢 這是以前的歷史發文 (已經重整過網頁了)，只能乖乖用 Google Drive iframe
-                        let partLabel = driveUrls.length > 1 ? `<p style="font-weight: 900; color: var(--slate-blue); margin: 0 0 8px 0; font-size: 1rem; display: flex; align-items: center;"><span class="hint-label" style="margin-right: 8px;">Part ${idx + 1}</span></p>` : '';
-                        let directUrl = `https://drive.google.com/uc?export=download&id=${driveId}`;
-                        
                         return `
                         <div style="margin-bottom: 20px;">
                             ${partLabel}
@@ -1664,7 +1689,7 @@
                                     <h3 style="color:white; margin:0 0 10px 0; font-size:1.1rem;">影片正在雲端高畫質封裝中...</h3>
                                     <p style="color:#94A3B8; font-size:0.85rem; margin:0 0 15px 0; line-height:1.5;">雲端轉檔約需 3-5 分鐘。若您不想等待，<br>可嘗試點擊下方按鈕，呼叫瀏覽器極速秒播！</p>
                                     <button onclick="forceNativePlay('${driveId}', '${directUrl}')" style="background:var(--accent-green); color:white; width:auto; padding:10px 20px; font-size:0.95rem; margin:0; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);">
-                                        ⚡ 啟動極速秒播 (無須等待)
+                                        ⚡ 啟推極速秒播 (無須等待)
                                     </button>
                                 </div>
 
@@ -1693,6 +1718,7 @@
                             <span class="toggle-btn"><span class="arrow-down"></span> 點擊展開</span>
                         </div>
                         <div class="ai-section-body" style="display:none; border-top: 1px dashed #CBD5E1; padding-top: 16px; margin-top: 12px;">
+                            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">※ 系統已為您啟動防護，超長錄影自動切割保護。請依序觀看：</p>
                             ${itemsHtml}
                         </div>
                     </div>`;
@@ -1726,7 +1752,7 @@
             const playerBox = document.getElementById(`native-player-box-${driveId}`);
             
             if (playerBox) {
-                playerBox.innerHTML = '';
+                playerBox.innerHTML = ''; // 清空影片，停止載入
                 playerBox.style.display = 'none';
             }
             if (overlay) overlay.style.display = 'flex';
