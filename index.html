@@ -304,7 +304,7 @@
     <div class="section" id="publish-section" style="display: none; border-left: 5px solid var(--primary-yellow);">
         <h3 style="margin-top:0;">發起新提問</h3>
         <p style="margin-bottom: 12px; font-size: 0.95rem;">
-            <span class="hint-label">系統升級</span><span style="color: var(--accent-green); font-weight: bold;">支援零等待邊錄邊傳！結束錄影秒發布！</span>
+            <span class="hint-label">系統升級</span><span style="color: var(--accent-green); font-weight: bold;">支援零等待極速備份！結束錄影秒發布！</span>
         </p>
 
         <div class="media-toggle-container">
@@ -431,7 +431,7 @@
             <div style="margin-top:32px; border-top: 2px dashed var(--glass-border); padding-top: 24px;">
                 <h3 style="margin-top:0;">新增影音回覆 / 追問</h3>
                 <p style="margin-bottom: 12px; font-size: 0.95rem;">
-                    <span class="hint-label">系統升級</span><span style="color: var(--accent-green); font-weight: bold;">支援零等待邊錄邊傳！結束錄影秒發布！</span>
+                    <span class="hint-label">系統升級</span><span style="color: var(--accent-green); font-weight: bold;">支援零等待極速備份！結束錄影秒發布！</span>
                 </p>
 
                 <div class="media-toggle-container">
@@ -1089,7 +1089,7 @@
             if (isError) badgeHtml = '<span class="status-icon status-error">錯誤</span>';
             else if (text.includes("邊錄邊傳") || text.includes("進度") || text.includes("存入") || text.includes("封裝")) badgeHtml = '<span class="status-icon" style="background:#DBEAFE; color:#1E40AF;">雲端同步中</span>';
             else if (text.includes("錄製中")) badgeHtml = '<span class="status-icon" style="background:#FEE2E2; color:#991B1B;">錄製中</span>';
-            else if (text.includes("切換 Part")) badgeHtml = '<span class="status-icon" style="background:#FCA5A5; color:#7F1D1D;">防護運作中</span>';
+            else if (text.includes("極速防護")) badgeHtml = '<span class="status-icon" style="background:#FCA5A5; color:#7F1D1D;">防護運作中</span>';
             else if (text.includes("暫停") || text.includes("切換") || text.includes("隱藏") || text.includes("取消") || text.includes("重試")) badgeHtml = '<span class="status-icon" style="background:#FEF3C7; color:#B45309;">提醒</span>';
             else badgeHtml = '<span class="status-icon status-success">系統提示</span>';
             msgEl.innerHTML = badgeHtml + text; msgEl.style.display = 'block';
@@ -1349,9 +1349,9 @@
             } catch (err) { showRecorderMsg(type, "發生錯誤：" + err.message, true, true); killMediaTracks(); }
         }
 
-        // 🌟 啟動錄影：建立 Session 與第一段的 PartState
+        // 🌟 啟動錄影：建立 Session 與第一段的 PartState (每分鐘極速備份版)
         async function startRecording(type) {
-            showRecorderMsg(type, "系統初始化中...", false, true);
+            showRecorderMsg(type, "正在極速建立雲端專屬資料夾...", false, true);
             
             let mimeTypeToUse = 'video/webm'; 
             if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) { mimeTypeToUse = 'video/webm;codecs=vp8,opus'; } 
@@ -1367,7 +1367,7 @@
             // 初始化本次錄影的 Session
             activeSessions[type] = {
                 tempCourseId: tempCourseId,
-                folderId: null,
+                folderId: null, // 第一個片段成功後會把資料夾 ID 存來這裡，後續每分鐘都共用這個資料夾
                 parts: [],
                 splitTimer: null,
                 mimeType: mimeTypeToUse,
@@ -1377,7 +1377,7 @@
             const part1 = new PartState(type, 1, tempCourseId, null, mimeTypeToUse, determinedExt);
             activeSessions[type].parts.push(part1);
             
-            // 背景呼叫 GAS 開通通道，不卡前端錄影
+            // 背景呼叫 GAS 開通通道並建立資料夾，完全不卡前端錄影！
             initUploadForPart(part1);
 
             const targetBps = isMobileDevice() ? 1500000 : 8000000;
@@ -1388,8 +1388,8 @@
             
             mediaRecorder.start(1000); 
             
-            // 設定 3 分鐘平行切割機制
-            activeSessions[type].splitTimer = setInterval(() => triggerSplit(type), 3 * 60 * 1000);
+            // 🚀 關鍵修改：設定 1 分鐘 (60秒) 平行切割機制！
+            activeSessions[type].splitTimer = setInterval(() => triggerSplit(type), 60 * 1000);
 
             document.getElementById(`${type}-btn-glass-start`).style.display = 'none';
             const pauseBtn = document.getElementById(`${type}-btn-glass-pause`);
@@ -1400,10 +1400,10 @@
             isPaused = false;
             
             wakeUpRecorderControls(type); 
-            showRecorderMsg(type, "正在錄製中...", false, true);
+            showRecorderMsg(type, "正在錄製中... (系統將每分鐘為您自動備份)", false, true);
         }
 
-        // 🌟 絕對穩定的平行切割器
+        // 🌟 絕對穩定的平行切割器 (每分鐘無縫接軌版)
         function triggerSplit(type) {
             const session = activeSessions[type];
             if (!session || !mediaRecorder || mediaRecorder.state !== 'recording') return;
@@ -1412,12 +1412,13 @@
             const oldPart = session.parts[session.parts.length - 1];
             const nextPartIndex = oldPart.partIndex + 1;
 
-            showRecorderMsg(type, `[防護機制] 錄製達 ${oldPart.partIndex * 3} 分鐘，無縫切換 Part ${nextPartIndex}...`, false, true);
+            // 提示文字改為顯示當前是第幾分鐘
+            showRecorderMsg(type, `[極速防護] 已錄製 ${oldPart.partIndex} 分鐘，正在雲端封裝第 ${oldPart.partIndex} 段影片...`, false, true);
 
-            // 1. 創造平行時空的新片段狀態
+            // 1. 創造平行時空的新片段狀態 (會自動帶入剛剛建立好的 session.folderId)
             const newPart = new PartState(type, nextPartIndex, session.tempCourseId, session.folderId, session.mimeType, session.videoExt);
             session.parts.push(newPart);
-            initUploadForPart(newPart); // 背景建立通道
+            initUploadForPart(newPart); // 背景建立新通道，準備接手下一分鐘的資料
 
             // 2. 準備新的錄影器
             const targetBps = isMobileDevice() ? 1500000 : 8000000;
@@ -1427,9 +1428,9 @@
             mediaRecorder.ondataavailable = (e) => handleDataAvailable(e, newPart);
             mediaRecorder.onstop = () => handleStop(newPart, type);
 
-            // 3. 瞬間交接：新上舊下
+            // 3. 瞬間交接：新上舊下 (0 毫秒延遲)
             mediaRecorder.start(1000);
-            oldRecorder.stop(); // 停止舊的，它會自動呼叫 handleStop(oldPart, type) 並在背景慢慢上傳完！
+            oldRecorder.stop(); // 停止舊的，它會自動把過去一分鐘的完美影片在背景上傳完！
         }
 
         function getRoleForType(type) {
