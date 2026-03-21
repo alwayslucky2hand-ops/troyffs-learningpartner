@@ -540,12 +540,38 @@
         let currentLocalBlob = { post: null, reply: null }; 
 
         // 🔥 強制鎖定為 8MB (8388608 bytes)，這是 Gemini API 的硬性規定，不能更改！
-        let CHUNK_SIZE_MULTIPLE = 8388608; 
+        const CHUNK_SIZE_MULTIPLE = 8388608; 
         
-        let streamStates = {
-            post: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '', chunkIndexCounter: 0, mimeType: 'video/webm', videoExt: 'webm' },
-            reply: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '', chunkIndexCounter: 0, mimeType: 'video/webm', videoExt: 'webm' }
-        };
+        // 🌟【全新平行時空架構】：讓每一段影片擁有自己獨立的生命週期與狀態，互不干擾！
+        class PartState {
+            constructor(type, partIndex, courseId, folderId, mimeType, videoExt) {
+                this.type = type;
+                this.partIndex = partIndex;
+                this.courseId = courseId;
+                this.folderId = folderId;
+                this.mimeType = mimeType;
+                this.videoExt = videoExt;
+
+                this.driveUrl = '';
+                this.geminiUrl = '';
+                this.isInitDone = false; // 是否已經成功向 GAS 拿到上傳通道網址
+
+                this.localChunks = []; // 給本地預覽用的
+                this.buffer = new Blob([], { type: mimeType });
+                this.offset = 0;
+                this.queue = [];
+                this.isUploading = false;
+                this.isFinalized = false;
+                this.chunkIndexCounter = 0;
+
+                this.driveId = '';
+                this.geminiUri = '';
+                this.geminiName = '';
+            }
+        }
+
+        // 追蹤當前的錄影任務
+        let activeSessions = { post: null, reply: null }; 
 
         let ytPlayers = {};
         let ytUpdateTimers = {};
@@ -591,11 +617,9 @@
             return canvasTimerWorker;
         }
         
-        let isProcessingUploadQueue = { post: false, reply: false };
-
-        // 🎯 寬裕的 Timeout 設置：預設 60 秒，影片碎片可容忍至 120 秒
+        // 🎯 寬裕的 Timeout 設置
         const fetchWithTimeout = async (resource, options = {}) => {
-            const { timeout = 60000 } = options; 
+            const { timeout = 120000 } = options; // 放寬至 120 秒
             const controller = new AbortController();
             const id = setTimeout(() => controller.abort('timeout'), timeout);
             
@@ -619,7 +643,6 @@
         const muteSvg = `<svg viewBox="0 0 24 24" class="svg-icon" style="width:20px;height:20px;"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.73v2.06c2.89.86 5 3.54 5 6.67zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>`;
         const volLowSvg = `<svg viewBox="0 0 24 24" class="svg-icon" style="width:20px;height:20px;"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>`;
         const volHighSvg = `<svg viewBox="0 0 24 24" class="svg-icon" style="width:20px;height:20px;"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
-        
         const videoOnSvg = `<svg viewBox="0 0 24 24" class="svg-icon"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>`;
         const videoOffSvg = `<svg viewBox="0 0 24 24" class="svg-icon"><path d="M21 6.5l-4 4V7c0-.55-.45-1-1-1H9.82L21 17.18V6.5zM3.27 2L2 3.27 4.73 6H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.21 0 .39-.08.54-.18L19.73 21 21 19.73 3.27 2z"/></svg>`;
 
@@ -857,45 +880,47 @@
             return { urls: uploadedUrls.join(','), ids: uploadedIds.join(',') };
         }
 
-        async function processUploadQueue(type) {
-            if (isProcessingUploadQueue[type]) return; 
-            const state = streamStates[type];
-            if (!state || state.queue.length === 0) return;
+        // ==========================================
+        // 核心架構：平行時空的背景上傳機制
+        // ==========================================
+        async function processUploadQueue(partState) {
+            // 安全防護：如果這個片段正在上傳，或沒有任務，或還沒拿到上傳網址，就等一下
+            if (partState.isUploading || partState.queue.length === 0) return;
+            if (!partState.isInitDone) return; 
 
-            isProcessingUploadQueue[type] = true; 
-
-            const chunkObj = state.queue.shift();
-            const { blob, isFinal, isSplitting, driveUrl, geminiUrl, offset, chunkIndex } = chunkObj; 
+            partState.isUploading = true;
+            const chunkObj = partState.queue.shift();
+            const { blob, isFinal, offset, chunkIndex } = chunkObj; 
 
             try {
+                // 如果是 0 byte 的最後收尾任務
                 if (blob.size === 0 && isFinal) {
-                    if (!isSplitting) {
-                        state.isFinalized = true;
-                        showRecorderMsg(type, "✅ 雲端備份已 100% 完成！請點擊下方確認發布。", false, true);
-                    }
-                    isProcessingUploadQueue[type] = false;
-                    processUploadQueue(type);
+                    partState.isFinalized = true;
+                    checkAllPartsFinalized(partState.type);
+                    partState.isUploading = false;
+                    processUploadQueue(partState);
                     return;
                 }
 
-                let progressText = `邊錄邊傳同步中... (碎片 #${chunkIndex}，已上傳 ${(offset / 1024 / 1024).toFixed(1)} MB)`;
-                if (isFinal || currentRecordType !== type) {
-                    progressText = `正在雲端封裝此片段... (即將完成)`;
+                let progressText = `邊錄邊傳平行同步中... (Part ${partState.partIndex} 碎塊 #${chunkIndex}, 已傳 ${(offset / 1024 / 1024).toFixed(1)} MB)`;
+                if (isFinal) {
+                    progressText = `正在雲端封裝 Part ${partState.partIndex}... (即將完成)`;
                 }
-                showRecorderMsg(type, `<span class="spinner"></span> ${progressText} (請勿關閉網頁)`, false, true);
+                showRecorderMsg(partState.type, `<span class="spinner"></span> ${progressText}`, false, true);
 
                 const chunkBase64 = await blobToBase64(blob);
                 const payloadTotalSize = isFinal ? (offset + blob.size) : '*';
 
-                // 🎯 影片上傳容忍度拉高到 120 秒，確保 8MB 足夠時間傳輸完畢
                 const response = await fetchWithTimeout(GAS_LIVE_URL, {
                     method: 'POST',
                     redirect: 'follow',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({
-                        action: 'upload_chunk', isDualTrack: true, uploadUrlDrive: driveUrl, 
-                        uploadUrlGemini: geminiUrl, chunkBase64: chunkBase64,
-                        start: offset, totalSize: payloadTotalSize, chunkIndex: chunkIndex
+                        action: 'upload_chunk', isDualTrack: true, 
+                        uploadUrlDrive: partState.driveUrl, 
+                        uploadUrlGemini: partState.geminiUrl, 
+                        chunkBase64: chunkBase64,
+                        start: offset, totalSize: payloadTotalSize
                     }),
                     timeout: 120000 
                 });
@@ -904,47 +929,126 @@
 
                 if (data.status === 'success' || data.status === 'resume') {
                     if (isFinal && data.status === 'success') {
-                        state.completedParts.push({
-                            driveId: data.driveId,
-                            geminiUri: data.geminiUri,
-                            geminiName: data.geminiName
-                        });
-
-                        if (!isSplitting) {
-                            state.isFinalized = true;
-                            showRecorderMsg(type, "✅ 雲端備份已 100% 完成！請點擊下方確認發布。", false, true);
-                        } else {
-                            showRecorderMsg(type, `✅ 歷史片段已安全存入雲端專屬資料夾！`, false, true);
-                        }
+                        partState.driveId = data.driveId;
+                        partState.geminiUri = data.geminiUri;
+                        partState.geminiName = data.geminiName;
+                        partState.isFinalized = true;
+                        showRecorderMsg(partState.type, `✅ Part ${partState.partIndex} 雲端備份完成！`, false, true);
+                        checkAllPartsFinalized(partState.type);
                     }
                 } else {
                     throw new Error(data.message || "轉發失敗");
                 }
 
             } catch (e) {
-                console.error("Upload error caught:", e);
-                
+                console.error(`Part ${partState.partIndex} 上傳發生錯誤:`, e);
                 chunkObj.retryCount = (chunkObj.retryCount || 0) + 1;
                 
                 const backoffTime = Math.min(2000 * Math.pow(1.5, chunkObj.retryCount - 1), 10000);
                 
                 if (chunkObj.retryCount > 6) {
-                    showRecorderMsg(type, `網路持續不穩，系統正努力嘗試恢復中 (${e.message})...`, true, true);
-                } else {
-                    showRecorderMsg(type, `網路波動 (${e.message})，將於 ${Math.round(backoffTime/1000)} 秒後自動重試 (第 ${chunkObj.retryCount} 次)...`, true, true);
+                    showRecorderMsg(partState.type, `Part ${partState.partIndex} 網路不穩，系統正努力嘗試恢復中...`, true, true);
                 }
                 
-                state.queue.unshift(chunkObj);
+                // 失敗了，把任務塞回陣列最前面重試
+                partState.queue.unshift(chunkObj);
                 
                 setTimeout(() => { 
-                    isProcessingUploadQueue[type] = false; 
-                    processUploadQueue(type); 
+                    partState.isUploading = false; 
+                    processUploadQueue(partState); 
                 }, backoffTime);
                 return;
             }
 
-            isProcessingUploadQueue[type] = false;
-            processUploadQueue(type);
+            partState.isUploading = false;
+            processUploadQueue(partState);
+        }
+
+        // 檢查是否這個 Session 所有的片段都上傳封裝完畢了
+        function checkAllPartsFinalized(type) {
+            const session = activeSessions[type];
+            if (!session) return;
+            const allDone = session.parts.every(p => p.isFinalized);
+            // 如果所有的 parts 都 Finalized，而且 splitTimer 已經被清除了(代表使用者真的按下了結束錄影)
+            if (allDone && !session.splitTimer) {
+                showRecorderMsg(type, "✅ 所有片段皆已安全存入雲端！請點擊下方確認發布。", false, true);
+            }
+        }
+
+        // 收集錄影資料的方法 (綁定到單一片段)
+        function handleDataAvailable(e, partState) {
+            if (e.data.size > 0) { 
+                partState.localChunks.push(e.data); // 本地預覽用
+                partState.buffer = new Blob([partState.buffer, e.data], { type: partState.mimeType });
+                
+                // 滿 8MB 就切塊送進專屬佇列
+                if (partState.buffer.size >= CHUNK_SIZE_MULTIPLE) {
+                    const bytesToUpload = Math.floor(partState.buffer.size / CHUNK_SIZE_MULTIPLE) * CHUNK_SIZE_MULTIPLE;
+                    const chunkToUpload = partState.buffer.slice(0, bytesToUpload);
+                    partState.buffer = partState.buffer.slice(bytesToUpload);
+                    
+                    partState.queue.push({ 
+                        chunkIndex: partState.chunkIndexCounter++,
+                        blob: chunkToUpload, 
+                        isFinal: false, 
+                        offset: partState.offset,
+                        retryCount: 0
+                    });
+                    partState.offset += chunkToUpload.size; 
+                    
+                    processUploadQueue(partState);
+                }
+            } 
+        }
+
+        // 停止錄影的方法 (綁定到單一片段)
+        function handleStop(partState, type) {
+            let finalBlob = partState.buffer && partState.buffer.size > 0 ? partState.buffer : new Blob([], { type: partState.mimeType });
+
+            partState.queue.push({ 
+                chunkIndex: partState.chunkIndexCounter++,
+                blob: finalBlob, 
+                isFinal: true, 
+                offset: partState.offset,
+                retryCount: 0 
+            });
+            
+            partState.buffer = new Blob([], { type: partState.mimeType });
+            processUploadQueue(partState);
+        }
+
+        // 非同步向 GAS 請求建置上傳通道 (每個片段專屬)
+        async function initUploadForPart(partState) {
+            try {
+                const initRes = await fetchWithTimeout(GAS_LIVE_URL, {
+                    method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ 
+                        action: 'init_upload', mediaType: 'video', email: currentUserEmail,
+                        courseId: partState.courseId, role: getRoleForType(partState.type), partIndex: partState.partIndex,
+                        folderId: partState.folderId, videoExt: partState.videoExt, mimeType: partState.mimeType
+                    }),
+                    timeout: 20000 
+                });
+                const initData = await initRes.json();
+                if (initData.status !== 'success') throw new Error(initData.message);
+
+                partState.driveUrl = initData.uploadUrlDrive;
+                partState.geminiUrl = initData.uploadUrlGemini;
+
+                // 如果是第一段，把成功建立的資料夾 ID 存回 session，讓接下來的 Part 共用
+                const session = activeSessions[partState.type];
+                if (session && !session.folderId && initData.folderId) {
+                    session.folderId = initData.folderId;
+                }
+
+                partState.isInitDone = true;
+                processUploadQueue(partState); // 通道建立好，開始消化排隊中的碎片
+
+            } catch (e) {
+                console.log(`Part ${partState.partIndex} 初始化失敗: ${e.message}，5秒後重試...`);
+                // 失敗了就默默重試，不干擾錄影
+                setTimeout(() => initUploadForPart(partState), 5000); 
+            }
         }
 
         function killMediaTracks() {
@@ -983,9 +1087,9 @@
             const msgEl = document.getElementById(elId); if(!msgEl) return;
             let badgeHtml = '';
             if (isError) badgeHtml = '<span class="status-icon status-error">錯誤</span>';
-            else if (text.includes("邊錄邊傳") || text.includes("進度") || text.includes("存入")) badgeHtml = '<span class="status-icon" style="background:#DBEAFE; color:#1E40AF;">雲端處理</span>';
+            else if (text.includes("邊錄邊傳") || text.includes("進度") || text.includes("存入") || text.includes("封裝")) badgeHtml = '<span class="status-icon" style="background:#DBEAFE; color:#1E40AF;">雲端同步中</span>';
             else if (text.includes("錄製中")) badgeHtml = '<span class="status-icon" style="background:#FEE2E2; color:#991B1B;">錄製中</span>';
-            else if (text.includes("切割") || text.includes("封裝")) badgeHtml = '<span class="status-icon" style="background:#FCA5A5; color:#7F1D1D;">防護運作中</span>';
+            else if (text.includes("切換 Part")) badgeHtml = '<span class="status-icon" style="background:#FCA5A5; color:#7F1D1D;">防護運作中</span>';
             else if (text.includes("暫停") || text.includes("切換") || text.includes("隱藏") || text.includes("取消") || text.includes("重試")) badgeHtml = '<span class="status-icon" style="background:#FEF3C7; color:#B45309;">提醒</span>';
             else badgeHtml = '<span class="status-icon status-success">系統提示</span>';
             msgEl.innerHTML = badgeHtml + text; msgEl.style.display = 'block';
@@ -1245,78 +1349,13 @@
             } catch (err) { showRecorderMsg(type, "發生錯誤：" + err.message, true, true); killMediaTracks(); }
         }
 
-        async function triggerSplit(type) {
-            const state = streamStates[type];
-            if (!state || !mediaRecorder || mediaRecorder.state !== 'recording') return;
-
-            showRecorderMsg(type, `[防護機制] 錄製達 ${state.partIndex * 3} 分鐘，正在雲端封裝 Part ${state.partIndex}...`, false, true);
-            state.isSplitting = true;
-            mediaRecorder.stop(); 
-
-            let retries = 3;
-            let initData = null;
-
-            setTimeout(async () => {
-                state.partIndex++;
-                
-                while (retries > 0) {
-                    try {
-                        const initRes = await fetchWithTimeout(GAS_LIVE_URL, {
-                            method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                            body: JSON.stringify({ 
-                                action: 'init_upload', mediaType: 'video', email: currentUserEmail,
-                                courseId: state.tempCourseId, role: getRoleForType(type), partIndex: state.partIndex,
-                                folderId: state.folderId, videoExt: state.videoExt, mimeType: state.mimeType
-                            }),
-                            timeout: 15000 
-                        });
-                        initData = await initRes.json();
-                        if (initData.status === 'success') break;
-                    } catch(e) {
-                        retries--;
-                        if (retries === 0) {
-                            showRecorderMsg(type, "自動切割連線失敗，您的網路可能已斷開", true, true);
-                            return;
-                        }
-                        await new Promise(r => setTimeout(r, 2000));
-                    }
-                }
-
-                if (initData && initData.status === 'success') {
-                    state.driveUrl = initData.uploadUrlDrive;
-                    state.geminiUrl = initData.uploadUrlGemini;
-                    state.buffer = new Blob([], { type: state.mimeType || mediaRecorder.mimeType || 'video/webm' });
-                    state.offset = 0;
-                    state.chunkIndexCounter = 0; 
-                    state.isFinalized = false;
-
-                    recordedChunks = [];
-                    mediaRecorder.start(1000);
-                    state.isSplitting = false;
-                    showRecorderMsg(type, `[自動接力] Part ${state.partIndex} 繼續錄製中...`, false, true);
-                } else {
-                    showRecorderMsg(type, "自動切割建置失敗，請確認網路狀態。", true, true);
-                }
-            }, 800);
-        }
-
-        function getRoleForType(type) {
-            const isAdmin = currentUserEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-            if (type === 'post') return '學員提問';
-            return isAdmin ? '陪跑教練' : '學員追問';
-        }
-
+        // 🌟 啟動錄影：建立 Session 與第一段的 PartState
         async function startRecording(type) {
-            const titleInput = document.getElementById('post-title') ? document.getElementById('post-title').value.trim() : '';
-
-            showRecorderMsg(type, "正在初始化雲端專屬資料夾與直傳通道...", false, true);
+            showRecorderMsg(type, "系統初始化中...", false, true);
             
             let mimeTypeToUse = 'video/webm'; 
-            if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) { 
-                mimeTypeToUse = 'video/webm;codecs=vp8,opus'; 
-            } else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264,opus') || MediaRecorder.isTypeSupported('video/webm;codecs=h264')) { 
-                mimeTypeToUse = 'video/webm;codecs=h264,opus'; 
-            } 
+            if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) { mimeTypeToUse = 'video/webm;codecs=vp8,opus'; } 
+            else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264,opus') || MediaRecorder.isTypeSupported('video/webm;codecs=h264')) { mimeTypeToUse = 'video/webm;codecs=h264,opus'; } 
 
             const determinedExt = 'webm'; 
 
@@ -1325,123 +1364,32 @@
                 ? `FFS-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`
                 : currentPost.courseId;
 
-            try {
-                const initRes = await fetchWithTimeout(GAS_LIVE_URL, {
-                    method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ 
-                        action: 'init_upload', mediaType: 'video', email: currentUserEmail, courseId: tempCourseId,
-                        title: titleInput, role: getRoleForType(type), partIndex: 1, videoExt: determinedExt, mimeType: mimeTypeToUse
-                    }),
-                    timeout: 20000
-                });
-                const initData = await initRes.json();
-                if (initData.status !== 'success') throw new Error(initData.message);
+            // 初始化本次錄影的 Session
+            activeSessions[type] = {
+                tempCourseId: tempCourseId,
+                folderId: null,
+                parts: [],
+                splitTimer: null,
+                mimeType: mimeTypeToUse,
+                videoExt: determinedExt
+            };
 
-                if (streamStates[type] && streamStates[type].splitTimer) {
-                    clearInterval(streamStates[type].splitTimer);
-                }
-
-                streamStates[type] = {
-                    driveUrl: initData.uploadUrlDrive, geminiUrl: initData.uploadUrlGemini,
-                    buffer: new Blob([], { type: mimeTypeToUse }), offset: 0, isUploading: false, queue: [],
-                    driveId: '', geminiUri: '', geminiName: '', isFinalized: false,
-                    partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false,
-                    folderId: initData.folderId, tempCourseId: tempCourseId, chunkIndexCounter: 0,
-                    mimeType: mimeTypeToUse, videoExt: determinedExt
-                };
-            } catch(e) {
-                showRecorderMsg(type, "通道與資料夾建立失敗: " + e.message, true, true);
-                return;
-            }
-
-            recordedChunks = []; 
-            const targetBps = isMobileDevice() ? 1500000 : 8000000;
-            let options = { videoBitsPerSecond: targetBps, mimeType: mimeTypeToUse };
-
-            // 🎯 強制不分裝置，所有上傳碎塊皆為 8MB (Gemini硬性規定)
-            CHUNK_SIZE_MULTIPLE = 8388608; 
-
-            mediaRecorder = new MediaRecorder(combinedStream, options);
+            const part1 = new PartState(type, 1, tempCourseId, null, mimeTypeToUse, determinedExt);
+            activeSessions[type].parts.push(part1);
             
-            mediaRecorder.ondataavailable = (e) => { 
-                if (e.data.size > 0) { 
-                    recordedChunks.push(e.data);
-                    const state = streamStates[type];
-                    
-                    state.buffer = new Blob([state.buffer, e.data], { type: state.mimeType });
-                    
-                    if (state.buffer.size >= CHUNK_SIZE_MULTIPLE) {
-                        const bytesToUpload = Math.floor(state.buffer.size / CHUNK_SIZE_MULTIPLE) * CHUNK_SIZE_MULTIPLE;
-                        const chunkToUpload = state.buffer.slice(0, bytesToUpload);
-                        state.buffer = state.buffer.slice(bytesToUpload);
-                        
-                        state.queue.push({ 
-                            chunkIndex: state.chunkIndexCounter++,
-                            blob: chunkToUpload, 
-                            isFinal: false, 
-                            isSplitting: false,
-                            driveUrl: state.driveUrl,
-                            geminiUrl: state.geminiUrl,
-                            offset: state.offset,
-                            retryCount: 0
-                        });
-                        state.offset += chunkToUpload.size; 
-                        
-                        processUploadQueue(type);
-                    }
-                } 
-            };
+            // 背景呼叫 GAS 開通通道，不卡前端錄影
+            initUploadForPart(part1);
 
-            mediaRecorder.onstop = function() {
-                const state = streamStates[type];
-                
-                let finalBlob = state.buffer && state.buffer.size > 0 ? state.buffer : new Blob([], { type: state.mimeType });
-
-                state.queue.push({ 
-                    chunkIndex: state.chunkIndexCounter++,
-                    blob: finalBlob, 
-                    isFinal: true, 
-                    isSplitting: state.isSplitting,
-                    driveUrl: state.driveUrl,
-                    geminiUrl: state.geminiUrl,
-                    offset: state.offset,
-                    retryCount: 0 
-                });
-                
-                state.buffer = new Blob([], { type: state.mimeType });
-                processUploadQueue(type);
-
-                if (state.isSplitting) return; 
-
-                clearInterval(state.splitTimer);
-                
-                let actualMimeType = mediaRecorder.mimeType || state.mimeType || 'video/webm';
-                
-                currentLocalBlob[type] = new Blob(recordedChunks, { type: actualMimeType });
-                
-                const previewVideo = document.getElementById(`${type}-preview-video`);
-                previewVideo.srcObject = null; 
-                previewVideo.src = URL.createObjectURL(currentLocalBlob[type]); 
-                previewVideo.controls = true; 
-                previewVideo.muted = false; 
-                previewVideo.style.pointerEvents = 'auto'; 
-                
-                document.getElementById(`${type}-overlay-controls`).style.display = 'none';
-                document.getElementById(`${type}-preview-actions`).style.display = 'block'; 
-                
-                const wrapper = document.getElementById(`${type}-recorder-wrapper`);
-                if (wrapper) wrapper.classList.remove('pseudo-fullscreen');
-                if (document.fullscreenElement) document.exitFullscreen().catch(()=>{});
-                else if (document.webkitFullscreenElement) document.webkitExitFullscreen();
-                
-                killMediaTracks(); 
-            };
+            const targetBps = isMobileDevice() ? 1500000 : 8000000;
+            mediaRecorder = new MediaRecorder(combinedStream, { videoBitsPerSecond: targetBps, mimeType: mimeTypeToUse });
+            
+            mediaRecorder.ondataavailable = (e) => handleDataAvailable(e, part1);
+            mediaRecorder.onstop = () => handleStop(part1, type);
             
             mediaRecorder.start(1000); 
             
-            streamStates[type].splitTimer = setInterval(() => {
-                triggerSplit(type);
-            }, 3 * 60 * 1000);
+            // 設定 3 分鐘平行切割機制
+            activeSessions[type].splitTimer = setInterval(() => triggerSplit(type), 3 * 60 * 1000);
 
             document.getElementById(`${type}-btn-glass-start`).style.display = 'none';
             const pauseBtn = document.getElementById(`${type}-btn-glass-pause`);
@@ -1455,20 +1403,79 @@
             showRecorderMsg(type, "正在錄製中...", false, true);
         }
 
+        // 🌟 絕對穩定的平行切割器
+        function triggerSplit(type) {
+            const session = activeSessions[type];
+            if (!session || !mediaRecorder || mediaRecorder.state !== 'recording') return;
+
+            const oldRecorder = mediaRecorder;
+            const oldPart = session.parts[session.parts.length - 1];
+            const nextPartIndex = oldPart.partIndex + 1;
+
+            showRecorderMsg(type, `[防護機制] 錄製達 ${oldPart.partIndex * 3} 分鐘，無縫切換 Part ${nextPartIndex}...`, false, true);
+
+            // 1. 創造平行時空的新片段狀態
+            const newPart = new PartState(type, nextPartIndex, session.tempCourseId, session.folderId, session.mimeType, session.videoExt);
+            session.parts.push(newPart);
+            initUploadForPart(newPart); // 背景建立通道
+
+            // 2. 準備新的錄影器
+            const targetBps = isMobileDevice() ? 1500000 : 8000000;
+            mediaRecorder = new MediaRecorder(combinedStream, { videoBitsPerSecond: targetBps, mimeType: session.mimeType });
+
+            // 新錄影器的事件綁定給新片段
+            mediaRecorder.ondataavailable = (e) => handleDataAvailable(e, newPart);
+            mediaRecorder.onstop = () => handleStop(newPart, type);
+
+            // 3. 瞬間交接：新上舊下
+            mediaRecorder.start(1000);
+            oldRecorder.stop(); // 停止舊的，它會自動呼叫 handleStop(oldPart, type) 並在背景慢慢上傳完！
+        }
+
+        function getRoleForType(type) {
+            const isAdmin = currentUserEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+            if (type === 'post') return '學員提問';
+            return isAdmin ? '陪跑教練' : '學員追問';
+        }
+
         function stopRecording(type) { 
-            const state = streamStates[type];
-            if (state && state.splitTimer) clearInterval(state.splitTimer);
+            const session = activeSessions[type];
+            if (session && session.splitTimer) {
+                clearInterval(session.splitTimer);
+                session.splitTimer = null; // 標記這是主動結束的
+            }
             if (mediaRecorder && mediaRecorder.state !== "inactive") {
-                if (state) state.isSplitting = false;
                 mediaRecorder.stop(); 
+                
+                // 設定 UI 預覽 (取最後一個片段來給前端當代表預覽)
+                setTimeout(() => {
+                    const lastPart = session.parts[session.parts.length - 1];
+                    currentLocalBlob[type] = new Blob(lastPart.localChunks, { type: lastPart.mimeType });
+                    
+                    const previewVideo = document.getElementById(`${type}-preview-video`);
+                    previewVideo.srcObject = null; 
+                    previewVideo.src = URL.createObjectURL(currentLocalBlob[type]); 
+                    previewVideo.controls = true; 
+                    previewVideo.muted = false; 
+                    previewVideo.style.pointerEvents = 'auto'; 
+                    
+                    document.getElementById(`${type}-overlay-controls`).style.display = 'none';
+                    document.getElementById(`${type}-preview-actions`).style.display = 'block'; 
+                    
+                    const wrapper = document.getElementById(`${type}-recorder-wrapper`);
+                    if (wrapper) wrapper.classList.remove('pseudo-fullscreen');
+                    if (document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+                    else if (document.webkitFullscreenElement) document.webkitExitFullscreen();
+                    
+                    killMediaTracks(); 
+                }, 500);
             }
         }
         
         window.abortRecording = function(type, event) {
             if(event) event.stopPropagation();
-            
-            const state = streamStates[type];
-            if (state && state.splitTimer) clearInterval(state.splitTimer);
+            const session = activeSessions[type];
+            if (session && session.splitTimer) clearInterval(session.splitTimer);
             
             if (mediaRecorder && mediaRecorder.state !== "inactive") {
                 mediaRecorder.onstop = () => {
@@ -1481,27 +1488,24 @@
                 resetRecordingUI(type);
             }
             
-            streamStates[type] = null;
+            activeSessions[type] = null;
             currentLocalBlob[type] = null;
-            recordedChunks = [];
             showRecorderMsg(type, "錄製已取消 (未儲存)", false, false);
         };
         
         function cancelRecording(type) { 
-            const state = streamStates[type];
-            if (state && state.splitTimer) clearInterval(state.splitTimer);
+            const session = activeSessions[type];
+            if (session && session.splitTimer) clearInterval(session.splitTimer);
             if (mediaRecorder && (mediaRecorder.state === "recording" || mediaRecorder.state === "paused")) { 
-                if(state) state.isSplitting = false;
                 mediaRecorder.stop(); mediaRecorder.onstop = () => { killMediaTracks(); resetRecordingUI(type); }; 
             } else { killMediaTracks(); resetRecordingUI(type); } 
         }
         
         function discardRecording(type) {
-            const state = streamStates[type];
-            if (state && state.splitTimer) clearInterval(state.splitTimer);
-            streamStates[type] = null;
+            const session = activeSessions[type];
+            if (session && session.splitTimer) clearInterval(session.splitTimer);
+            activeSessions[type] = null;
             currentLocalBlob[type] = null;
-            recordedChunks = [];
             resetRecordingUI(type);
         }
 
@@ -1923,6 +1927,7 @@
                 let finalVideoIds = [];
                 let finalTitle = titleInput || "AI 正在分析您的提問...";
                 let finalDesc = descInput || "";
+                let submittedCourseId = "";
 
                 if (mediaType === 'image') {
                     if(!titleInput || !descInput) throw new Error('圖片模式下，標題與描述為必填！');
@@ -1932,27 +1937,35 @@
                     } else { throw new Error('提示：請先拍攝或選擇圖片！'); }
                     finalTitle = titleInput;
                     finalDesc += "\n\n[SYS:處理中] AI 正在準備解析並建立專屬資料夾...";
+                    const now = new Date();
+                    submittedCourseId = `FFS-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
                 } else {
-                    const state = streamStates['post'];
-                    if (!state || state.completedParts.length === 0) throw new Error("提示：請先完成錄影！");
+                    const session = activeSessions['post'];
+                    if (!session || session.parts.length === 0) throw new Error("提示：請先完成錄影！");
                     
-                    btn.innerHTML = '<span class="spinner"></span> 正在確認雲端檔案同步...';
+                    btn.innerHTML = '<span class="spinner"></span> 正在確認所有雲端片段同步...';
+                    
+                    // 等待所有平行的片段都上傳封裝完畢
                     await new Promise(resolve => {
                         const check = setInterval(() => {
-                            if (state.isFinalized) { clearInterval(check); resolve(); }
+                            const allFinalized = session.parts.every(p => p.isFinalized);
+                            if (allFinalized) { clearInterval(check); resolve(); }
                         }, 500);
                     });
                     
                     let geminiFileDataArray = [];
-                    state.completedParts.forEach(part => {
-                        finalVideoUrls.push(`https://drive.google.com/file/d/${part.driveId}/view`);
-                        finalVideoIds.push(part.driveId);
-                        geminiFileDataArray.push(`[SYS:GEMINI_FILE=${part.geminiUri}|#|${part.geminiName}]`);
+                    session.parts.forEach(part => {
+                        if (part.driveId) { // 防錯：確保該 part 有成功上傳
+                            finalVideoUrls.push(`https://drive.google.com/file/d/${part.driveId}/view`);
+                            finalVideoIds.push(part.driveId);
+                            geminiFileDataArray.push(`[SYS:GEMINI_FILE=${part.geminiUri}|#|${part.geminiName}]`);
+                        }
                     });
 
-                    finalDesc += `\n\n[SYS:處理中] 影片已備份至雲端硬碟 (共 ${state.completedParts.length} 個片段)，AI 正在進行深度解析...\n${geminiFileDataArray.join('\n')}`;
-                    
-                    var submittedCourseId = state.tempCourseId;
+                    if (finalVideoIds.length === 0) throw new Error("無效的雲端備份，請重試。");
+
+                    finalDesc += `\n\n[SYS:處理中] 影片已備份至雲端硬碟 (共 ${finalVideoIds.length} 個片段)，AI 正在進行深度解析...\n${geminiFileDataArray.join('\n')}`;
+                    submittedCourseId = session.tempCourseId;
                 }
 
                 await fetch(GAS_LIVE_URL, {
@@ -2000,24 +2013,30 @@
                     } else { throw new Error('提示：請先拍攝或選擇圖片！'); }
                     finalDesc += "\n\n[SYS:處理中] AI 正在歸檔您的圖片並進行解析...";
                 } else {
-                    const state = streamStates['reply'];
-                    if (!state || state.completedParts.length === 0) throw new Error("提示：請先完成錄影！");
+                    const session = activeSessions['reply'];
+                    if (!session || session.parts.length === 0) throw new Error("提示：請先完成錄影！");
                     
-                    btn.innerHTML = '<span class="spinner"></span> 正在確認雲端檔案同步...';
+                    btn.innerHTML = '<span class="spinner"></span> 正在確認所有雲端片段同步...';
+                    
                     await new Promise(resolve => {
                         const check = setInterval(() => {
-                            if (state.isFinalized) { clearInterval(check); resolve(); }
+                            const allFinalized = session.parts.every(p => p.isFinalized);
+                            if (allFinalized) { clearInterval(check); resolve(); }
                         }, 500);
                     });
                     
                     let geminiFileDataArray = [];
-                    state.completedParts.forEach(part => {
-                        finalVideoUrls.push(`https://drive.google.com/file/d/${part.driveId}/view`);
-                        finalVideoIds.push(part.driveId);
-                        geminiFileDataArray.push(`[SYS:GEMINI_FILE=${part.geminiUri}|#|${part.geminiName}]`);
+                    session.parts.forEach(part => {
+                        if (part.driveId) {
+                            finalVideoUrls.push(`https://drive.google.com/file/d/${part.driveId}/view`);
+                            finalVideoIds.push(part.driveId);
+                            geminiFileDataArray.push(`[SYS:GEMINI_FILE=${part.geminiUri}|#|${part.geminiName}]`);
+                        }
                     });
 
-                    finalDesc += `\n\n[SYS:處理中] 影片已備份至雲端硬碟 (共 ${state.completedParts.length} 個片段)，AI 正在進行深度解析...\n${geminiFileDataArray.join('\n')}`;
+                    if (finalVideoIds.length === 0) throw new Error("無效的雲端備份，請重試。");
+
+                    finalDesc += `\n\n[SYS:處理中] 影片已備份至雲端硬碟 (共 ${finalVideoIds.length} 個片段)，AI 正在進行深度解析...\n${geminiFileDataArray.join('\n')}`;
                 }
 
                 await fetch(GAS_LIVE_URL, {
