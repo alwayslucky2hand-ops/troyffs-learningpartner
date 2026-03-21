@@ -539,8 +539,8 @@
         let pendingImages = { post: [], reply: [] }; 
         let currentLocalBlob = { post: null, reply: null }; 
 
-        // 🔥 降為 5MB 確保穩定性
-        const CHUNK_SIZE_MULTIPLE = 5242880; 
+        // 🔥 將原本寫死的 8MB 移除，統一使用變數 (稍後會在啟動時依設備賦值)
+        let CHUNK_SIZE_MULTIPLE = 5242880; 
         
         let streamStates = {
             post: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '', chunkIndexCounter: 0, mimeType: 'video/webm', videoExt: 'webm' },
@@ -819,11 +819,9 @@
                 const file = files[i]; 
                 const ext = file.name.split('.').pop() || 'jpg'; 
                 const filename = `Temp_${Date.now()}_${i}.${ext}`;
-                // 更新畫面提示
                 showRecorderMsg(type, `正在直傳雲端圖片 (${i+1}/${files.length})...`, false, true, true);
                 
                 try {
-                    // 步驟 1：請後端初始化上傳通道 (獲取上傳專用的 URL)
                     const initRes = await fetch(GAS_LIVE_URL, { 
                         method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
                         body: JSON.stringify({ action: 'init_upload', filename: filename, mediaType: 'image' }) 
@@ -833,25 +831,22 @@
                     
                     const uploadUrl = initData.uploadUrl;
                     
-                    // 步驟 2：將圖片轉換成 Base64 格式 (這樣才不會被 CORS 擋住)
                     const base64Data = await blobToBase64(file);
                     
-                    // 步驟 3：將 Base64 資料傳給我們自己的後端，由後端代為上傳至 Drive
                     const uploadRes = await fetch(GAS_LIVE_URL, {
                         method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                         body: JSON.stringify({
                             action: 'upload_chunk',
-                            isDualTrack: false,     // 圖片不需要傳到 Gemini，只要存 Drive
-                            uploadUrl: uploadUrl,   // 剛剛後端給我們的 Drive 上傳連結
-                            chunkBase64: base64Data, // 圖片內容
-                            start: 0,               // 圖片一次傳完，所以從 0 開始
+                            isDualTrack: false,     
+                            uploadUrl: uploadUrl,   
+                            chunkBase64: base64Data, 
+                            start: 0,               
                             totalSize: file.size
                         })
                     });
 
                     const uploadData = await uploadRes.json();
 
-                    // 步驟 4：確認後端回報上傳成功，記錄 ID 與網址
                     if (uploadData.status === 'success') {
                         uploadedIds.push(uploadData.fileId); 
                         uploadedUrls.push(`https://drive.google.com/file/d/${uploadData.fileId}/view`);
@@ -866,7 +861,7 @@
         }
 
         // ==========================================
-        // 核心優化：排程器確保 Base64 轉換安全
+        // 核心優化：排程器確保 Base64 轉換安全與防護網路斷線 (指數退避)
         // ==========================================
         async function processUploadQueue(type) {
             if (isProcessingUploadQueue[type]) return; 
@@ -937,14 +932,26 @@
 
             } catch (e) {
                 console.error("Upload error caught:", e);
-                showRecorderMsg(type, `網路波動 (${e.message})，系統將自動重試...`, true, true);
                 
+                // 🔥 改善點：導入「指數退避 (Exponential Backoff)」重試機制
+                chunkObj.retryCount = (chunkObj.retryCount || 0) + 1;
+                
+                // 退避策略：2秒 -> 3秒 -> 4.5秒 -> 6.7秒 -> 10秒 (上限 10 秒)
+                const backoffTime = Math.min(2000 * Math.pow(1.5, chunkObj.retryCount - 1), 10000);
+                
+                if (chunkObj.retryCount > 6) {
+                    showRecorderMsg(type, `網路持續不穩，系統正努力嘗試恢復中 (${e.message})...`, true, true);
+                } else {
+                    showRecorderMsg(type, `網路波動 (${e.message})，將於 ${Math.round(backoffTime/1000)} 秒後自動重試 (第 ${chunkObj.retryCount} 次)...`, true, true);
+                }
+                
+                // 將失敗的封包塞回佇列最前方
                 state.queue.unshift(chunkObj);
                 
                 setTimeout(() => { 
                     isProcessingUploadQueue[type] = false; 
                     processUploadQueue(type); 
-                }, 2000);
+                }, backoffTime);
                 return;
             }
 
@@ -996,7 +1003,7 @@
             else if (text.includes("邊錄邊傳") || text.includes("進度") || text.includes("存入")) badgeHtml = '<span class="status-icon" style="background:#DBEAFE; color:#1E40AF;">雲端處理</span>';
             else if (text.includes("錄製中")) badgeHtml = '<span class="status-icon" style="background:#FEE2E2; color:#991B1B;">錄製中</span>';
             else if (text.includes("切割") || text.includes("封裝")) badgeHtml = '<span class="status-icon" style="background:#FCA5A5; color:#7F1D1D;">防護運作中</span>';
-            else if (text.includes("暫停") || text.includes("切換") || text.includes("隱藏") || text.includes("取消")) badgeHtml = '<span class="status-icon" style="background:#FEF3C7; color:#B45309;">提醒</span>';
+            else if (text.includes("暫停") || text.includes("切換") || text.includes("隱藏") || text.includes("取消") || text.includes("重試")) badgeHtml = '<span class="status-icon" style="background:#FEF3C7; color:#B45309;">提醒</span>';
             else badgeHtml = '<span class="status-icon status-success">系統提示</span>';
             msgEl.innerHTML = badgeHtml + text; msgEl.style.display = 'block';
             if(!keep && !isError) setTimeout(() => msgEl.style.display = 'none', 5000);
@@ -1367,9 +1374,13 @@
             }
 
             recordedChunks = []; 
-            const targetBps = isMobileDevice() ? 3000000 : 8000000;
+            // 🔥 改善點：將手機碼率降至 1.5Mbps，降低封包傳輸負擔
+            const targetBps = isMobileDevice() ? 1500000 : 8000000;
 
             let options = { videoBitsPerSecond: targetBps, mimeType: mimeTypeToUse };
+
+            // 初始化動態封包大小 (取代原本寫死的 8MB)
+            CHUNK_SIZE_MULTIPLE = isMobileDevice() ? 2621440 : 5242880;
 
             mediaRecorder = new MediaRecorder(combinedStream, options);
             
@@ -1380,8 +1391,9 @@
                     
                     state.buffer = new Blob([state.buffer, e.data], { type: state.mimeType });
                     
-                    if (state.buffer.size >= 8388608) {
-                        const bytesToUpload = Math.floor(state.buffer.size / 8388608) * 8388608;
+                    // 🔥 改善點：使用動態封包尺寸判斷
+                    if (state.buffer.size >= CHUNK_SIZE_MULTIPLE) {
+                        const bytesToUpload = Math.floor(state.buffer.size / CHUNK_SIZE_MULTIPLE) * CHUNK_SIZE_MULTIPLE;
                         const chunkToUpload = state.buffer.slice(0, bytesToUpload);
                         state.buffer = state.buffer.slice(bytesToUpload);
                         
@@ -1392,7 +1404,8 @@
                             isSplitting: false,
                             driveUrl: state.driveUrl,
                             geminiUrl: state.geminiUrl,
-                            offset: state.offset
+                            offset: state.offset,
+                            retryCount: 0 // 新增重試計數器
                         });
                         state.offset += chunkToUpload.size; 
                         
@@ -1413,7 +1426,8 @@
                     isSplitting: state.isSplitting,
                     driveUrl: state.driveUrl,
                     geminiUrl: state.geminiUrl,
-                    offset: state.offset
+                    offset: state.offset,
+                    retryCount: 0 // 新增重試計數器
                 });
                 
                 state.buffer = new Blob([], { type: state.mimeType });
