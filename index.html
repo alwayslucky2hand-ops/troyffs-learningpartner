@@ -539,8 +539,8 @@
         let pendingImages = { post: [], reply: [] }; 
         let currentLocalBlob = { post: null, reply: null }; 
 
-        // 動態封包大小 (稍後會在啟動時依設備賦值)
-        let CHUNK_SIZE_MULTIPLE = 3145728; // 預設 3MB
+        // 🔥 強制鎖定為 8MB (8388608 bytes)，這是 Gemini API 的硬性規定，不能更改！
+        let CHUNK_SIZE_MULTIPLE = 8388608; 
         
         let streamStates = {
             post: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '', chunkIndexCounter: 0, mimeType: 'video/webm', videoExt: 'webm' },
@@ -593,9 +593,9 @@
         
         let isProcessingUploadQueue = { post: false, reply: false };
 
-        // 🎯 [終極防護機制 2] 放寬 Timeout，並優化 Abort 捕捉訊息
+        // 🎯 寬裕的 Timeout 設置：預設 60 秒，影片碎片可容忍至 120 秒
         const fetchWithTimeout = async (resource, options = {}) => {
-            const { timeout = 60000 } = options; // 預設放寬到 60 秒
+            const { timeout = 60000 } = options; 
             const controller = new AbortController();
             const id = setTimeout(() => controller.abort('timeout'), timeout);
             
@@ -605,7 +605,6 @@
                 return response;
             } catch (error) {
                 clearTimeout(id);
-                // 捕捉 Abort 錯誤並轉為可讀訊息，觸發後續的重試機制
                 if (error.name === 'AbortError') {
                     throw new Error('連線逾時，伺服器無回應');
                 }
@@ -888,7 +887,7 @@
                 const chunkBase64 = await blobToBase64(blob);
                 const payloadTotalSize = isFinal ? (offset + blob.size) : '*';
 
-                // 🎯 [終極防護機制 2] 碎塊上傳給予極大的 90 秒容忍度，避免被前端過早斬斷
+                // 🎯 影片上傳容忍度拉高到 120 秒，確保 8MB 足夠時間傳輸完畢
                 const response = await fetchWithTimeout(GAS_LIVE_URL, {
                     method: 'POST',
                     redirect: 'follow',
@@ -898,7 +897,7 @@
                         uploadUrlGemini: geminiUrl, chunkBase64: chunkBase64,
                         start: offset, totalSize: payloadTotalSize, chunkIndex: chunkIndex
                     }),
-                    timeout: 90000 // 給予高達 90 秒的雙軌傳輸等待時間
+                    timeout: 120000 
                 });
 
                 const data = await response.json();
@@ -1359,8 +1358,8 @@
             const targetBps = isMobileDevice() ? 1500000 : 8000000;
             let options = { videoBitsPerSecond: targetBps, mimeType: mimeTypeToUse };
 
-            // 🎯 [終極防護機制 1] 動態切塊瘦身，電腦端也稍微降至 3MB，更易於在波動中生存
-            CHUNK_SIZE_MULTIPLE = isMobileDevice() ? 1048576 : 3145728; 
+            // 🎯 強制不分裝置，所有上傳碎塊皆為 8MB (Gemini硬性規定)
+            CHUNK_SIZE_MULTIPLE = 8388608; 
 
             mediaRecorder = new MediaRecorder(combinedStream, options);
             
