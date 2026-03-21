@@ -540,7 +540,7 @@
         let currentLocalBlob = { post: null, reply: null }; 
 
         // 動態封包大小 (稍後會在啟動時依設備賦值)
-        let CHUNK_SIZE_MULTIPLE = 5242880; 
+        let CHUNK_SIZE_MULTIPLE = 3145728; // 預設 3MB
         
         let streamStates = {
             post: { driveUrl: '', geminiUrl: '', buffer: null, offset: 0, isUploading: false, queue: [], driveId: '', geminiUri: '', geminiName: '', isFinalized: false, partIndex: 1, completedParts: [], splitTimer: null, isSplitting: false, folderId: null, tempCourseId: '', chunkIndexCounter: 0, mimeType: 'video/webm', videoExt: 'webm' },
@@ -593,14 +593,24 @@
         
         let isProcessingUploadQueue = { post: false, reply: false };
 
-        // 🎯 [終極防護機制 2] 加入強制逾時中斷的 Fetch 包裝器，防止網路斷連時卡死
+        // 🎯 [終極防護機制 2] 放寬 Timeout，並優化 Abort 捕捉訊息
         const fetchWithTimeout = async (resource, options = {}) => {
-            const { timeout = 15000 } = options; // 預設 15 秒沒回應直接切斷重試
+            const { timeout = 60000 } = options; // 預設放寬到 60 秒
             const controller = new AbortController();
-            const id = setTimeout(() => controller.abort(), timeout);
-            const response = await fetch(resource, { ...options, signal: controller.signal });
-            clearTimeout(id);
-            return response;
+            const id = setTimeout(() => controller.abort('timeout'), timeout);
+            
+            try {
+                const response = await fetch(resource, { ...options, signal: controller.signal });
+                clearTimeout(id);
+                return response;
+            } catch (error) {
+                clearTimeout(id);
+                // 捕捉 Abort 錯誤並轉為可讀訊息，觸發後續的重試機制
+                if (error.name === 'AbortError') {
+                    throw new Error('連線逾時，伺服器無回應');
+                }
+                throw error;
+            }
         };
 
         // --- SVG Icons Definition ---
@@ -815,7 +825,6 @@
                 showRecorderMsg(type, `正在直傳雲端圖片 (${i+1}/${files.length})...`, false, true, true);
                 
                 try {
-                    // 加入 fetchWithTimeout 保障圖片上傳不會無限卡住
                     const initRes = await fetchWithTimeout(GAS_LIVE_URL, { 
                         method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
                         body: JSON.stringify({ action: 'init_upload', filename: filename, mediaType: 'image' }) 
@@ -879,7 +888,7 @@
                 const chunkBase64 = await blobToBase64(blob);
                 const payloadTotalSize = isFinal ? (offset + blob.size) : '*';
 
-                // 🎯 替換為 fetchWithTimeout，斷網15秒內馬上察覺，加速進入重試流程
+                // 🎯 [終極防護機制 2] 碎塊上傳給予極大的 90 秒容忍度，避免被前端過早斬斷
                 const response = await fetchWithTimeout(GAS_LIVE_URL, {
                     method: 'POST',
                     redirect: 'follow',
@@ -888,7 +897,8 @@
                         action: 'upload_chunk', isDualTrack: true, uploadUrlDrive: driveUrl, 
                         uploadUrlGemini: geminiUrl, chunkBase64: chunkBase64,
                         start: offset, totalSize: payloadTotalSize, chunkIndex: chunkIndex
-                    })
+                    }),
+                    timeout: 90000 // 給予高達 90 秒的雙軌傳輸等待時間
                 });
 
                 const data = await response.json();
@@ -1236,7 +1246,6 @@
             } catch (err) { showRecorderMsg(type, "發生錯誤：" + err.message, true, true); killMediaTracks(); }
         }
 
-        // 🎯 [終極防護機制 3] 強固化 3 分鐘自動接力機制，加入初始化重試迴圈
         async function triggerSplit(type) {
             const state = streamStates[type];
             if (!state || !mediaRecorder || mediaRecorder.state !== 'recording') return;
@@ -1251,7 +1260,6 @@
             setTimeout(async () => {
                 state.partIndex++;
                 
-                // 加入斷網重試迴圈，防止網路波動導致整個影片中斷
                 while (retries > 0) {
                     try {
                         const initRes = await fetchWithTimeout(GAS_LIVE_URL, {
@@ -1261,7 +1269,7 @@
                                 courseId: state.tempCourseId, role: getRoleForType(type), partIndex: state.partIndex,
                                 folderId: state.folderId, videoExt: state.videoExt, mimeType: state.mimeType
                             }),
-                            timeout: 10000 // 每次重連等待 10 秒
+                            timeout: 15000 
                         });
                         initData = await initRes.json();
                         if (initData.status === 'success') break;
@@ -1271,7 +1279,6 @@
                             showRecorderMsg(type, "自動切割連線失敗，您的網路可能已斷開", true, true);
                             return;
                         }
-                        // 失敗等待 2 秒再試
                         await new Promise(r => setTimeout(r, 2000));
                     }
                 }
@@ -1325,7 +1332,8 @@
                     body: JSON.stringify({ 
                         action: 'init_upload', mediaType: 'video', email: currentUserEmail, courseId: tempCourseId,
                         title: titleInput, role: getRoleForType(type), partIndex: 1, videoExt: determinedExt, mimeType: mimeTypeToUse
-                    }) 
+                    }),
+                    timeout: 20000
                 });
                 const initData = await initRes.json();
                 if (initData.status !== 'success') throw new Error(initData.message);
@@ -1351,8 +1359,8 @@
             const targetBps = isMobileDevice() ? 1500000 : 8000000;
             let options = { videoBitsPerSecond: targetBps, mimeType: mimeTypeToUse };
 
-            // 🎯 [終極防護機制 1] 動態切塊瘦身，手機端降至 1MB，極大增加成功率並避免卡死
-            CHUNK_SIZE_MULTIPLE = isMobileDevice() ? 1048576 : 5242880; 
+            // 🎯 [終極防護機制 1] 動態切塊瘦身，電腦端也稍微降至 3MB，更易於在波動中生存
+            CHUNK_SIZE_MULTIPLE = isMobileDevice() ? 1048576 : 3145728; 
 
             mediaRecorder = new MediaRecorder(combinedStream, options);
             
