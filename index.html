@@ -881,7 +881,7 @@
         }
 
         // ==========================================
-        // 核心架構：平行時空的背景上傳機制
+        // 核心架構：平行時空的背景上傳機制 (抗波動自癒升級版)
         // ==========================================
         async function processUploadQueue(partState) {
             // 安全防護：如果這個片段正在上傳，或沒有任務，或還沒拿到上傳網址，就等一下
@@ -942,17 +942,50 @@
 
             } catch (e) {
                 console.error(`Part ${partState.partIndex} 上傳發生錯誤:`, e);
-                chunkObj.retryCount = (chunkObj.retryCount || 0) + 1;
                 
+                const errorMsg = e.message || "";
+                
+                // 🚀 核心修復 1：攔截 Gemini 偏移量錯誤，自動快轉自癒
+                const offsetMatch = errorMsg.match(/wrong offset \(\d+ instead of (\d+)\)/);
+                if (offsetMatch) {
+                    const expectedOffset = parseInt(offsetMatch[1], 10);
+                    showRecorderMsg(partState.type, `⚡ 網路波動自癒中：偵測到雲端已接收，系統自動快轉至斷點 (${(expectedOffset / 1024 / 1024).toFixed(1)}MB)...`, false, true);
+                    
+                    // 伺服器已經拿到這塊了，所以我們不把它塞回 queue，直接呼叫下一次 processUploadQueue
+                    // 讓佇列中的下一塊 (符合 expectedOffset 的碎塊) 繼續上傳
+                    setTimeout(() => {
+                        partState.isUploading = false;
+                        processUploadQueue(partState);
+                    }, 1000);
+                    return;
+                }
+
+                // 🚀 核心修復 2：無網路狀態下先暫停重試，避免短時間內產生大量錯誤
+                if (!navigator.onLine) {
+                    showRecorderMsg(partState.type, `網路目前斷線，等待網路恢復後將自動接續上傳...`, true, true);
+                    partState.queue.unshift(chunkObj); // 放回頭部
+                    
+                    // 每 3 秒檢查一次網路，直到恢復
+                    const checkNetwork = setInterval(() => {
+                        if (navigator.onLine) {
+                            clearInterval(checkNetwork);
+                            showRecorderMsg(partState.type, `網路已恢復，繼續同步上傳...`, false, true);
+                            partState.isUploading = false;
+                            processUploadQueue(partState);
+                        }
+                    }, 3000);
+                    return;
+                }
+
+                // 常規重試邏輯 (指數退避)
+                chunkObj.retryCount = (chunkObj.retryCount || 0) + 1;
                 const backoffTime = Math.min(2000 * Math.pow(1.5, chunkObj.retryCount - 1), 10000);
                 
-                if (chunkObj.retryCount > 6) {
-                    showRecorderMsg(partState.type, `Part ${partState.partIndex} 網路不穩，系統正努力嘗試恢復中...`, true, true);
+                if (chunkObj.retryCount > 3) {
+                    showRecorderMsg(partState.type, `Part ${partState.partIndex} 網路不穩，系統正努力嘗試恢復中... (重試 ${chunkObj.retryCount} 次)`, true, true);
                 }
                 
-                // 失敗了，把任務塞回陣列最前面重試
-                partState.queue.unshift(chunkObj);
-                
+                partState.queue.unshift(chunkObj); // 失敗了，把任務塞回陣列最前面重試
                 setTimeout(() => { 
                     partState.isUploading = false; 
                     processUploadQueue(partState); 
